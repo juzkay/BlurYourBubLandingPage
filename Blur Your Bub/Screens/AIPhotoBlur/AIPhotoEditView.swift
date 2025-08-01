@@ -291,65 +291,43 @@ class FaceSelectionOverlayView: UIView {
             return .zero
         }
         
-        let zoomScale = scrollView.zoomScale
-        let imageViewFrame = imageView.frame
         let imageSize = originalImage.size
-        let scrollOffset = scrollView.contentOffset
-        let contentInset = scrollView.contentInset
-        
         print("🔍 [CoordinateTransform] Input imageRect: \(imageRect)")
-        print("🔍 [CoordinateTransform] Image size: \(imageSize)")
-        print("🔍 [CoordinateTransform] ImageView frame: \(imageViewFrame)")
-        print("🔍 [CoordinateTransform] Zoom scale: \(zoomScale)")
-        print("🔍 [CoordinateTransform] Scroll offset: \(scrollOffset)")
-        print("🔍 [CoordinateTransform] Content inset: \(contentInset)")
+        print("🔍 [CoordinateTransform] Original image size: \(imageSize)")
+        print("🔍 [CoordinateTransform] ScrollView bounds: \(scrollView.bounds)")
+        print("🔍 [CoordinateTransform] ImageView frame: \(imageView.frame)")
         
-        // Calculate the actual displayed image size and position (scaleAspectFit)
-        let scaleX = imageViewFrame.width / imageSize.width
-        let scaleY = imageViewFrame.height / imageSize.height
-        let scale = min(scaleX, scaleY)
+        // Step 1: Calculate how the image is displayed in the scroll view (aspect fit)
+        let scrollViewSize = scrollView.bounds.size
         
-        let displayedImageWidth = imageSize.width * scale
-        let displayedImageHeight = imageSize.height * scale
+        // Calculate scale to fit image in scroll view
+        let scaleX = scrollViewSize.width / imageSize.width
+        let scaleY = scrollViewSize.height / imageSize.height
+        let scale = min(scaleX, scaleY) // aspect fit uses minimum scale
         
-        // Calculate the offset to center the image within the imageView
-        let offsetX = (imageViewFrame.width - displayedImageWidth) / 2
-        let offsetY = (imageViewFrame.height - displayedImageHeight) / 2
+        // Calculate actual displayed image size
+        let displayedWidth = imageSize.width * scale
+        let displayedHeight = imageSize.height * scale
         
-        print("🔍 [CoordinateTransform] Scale: \(scale)")
-        print("🔍 [CoordinateTransform] Displayed size: \(displayedImageWidth) x \(displayedImageHeight)")
-        print("🔍 [CoordinateTransform] Image offset: (\(offsetX), \(offsetY))")
+        // Calculate centering offset
+        let offsetX = (scrollViewSize.width - displayedWidth) / 2
+        let offsetY = (scrollViewSize.height - displayedHeight) / 2
         
-        // Convert image coordinates to displayed image coordinates
-        let displayedX = imageRect.origin.x * scale
-        let displayedY = imageRect.origin.y * scale
-        let displayedWidth = imageRect.size.width * scale
-        let displayedHeight = imageRect.size.height * scale
+        print("🔍 [CoordinateTransform] Scale factor: \(scale)")
+        print("🔍 [CoordinateTransform] Displayed size: \(displayedWidth) x \(displayedHeight)")
+        print("🔍 [CoordinateTransform] Center offset: (\(offsetX), \(offsetY))")
         
-        // Position within the imageView (add centering offset)
-        let imageViewX = displayedX + offsetX
-        let imageViewY = displayedY + offsetY
+        // Step 2: Convert face coordinates from image space to displayed space
+        let faceX = imageRect.origin.x * scale + offsetX
+        let faceY = imageRect.origin.y * scale + offsetY
+        let faceWidth = imageRect.size.width * scale
+        let faceHeight = imageRect.size.height * scale
         
-        // Convert to scroll view coordinates (add imageView origin)
-        let scrollViewX = imageViewX + imageViewFrame.origin.x
-        let scrollViewY = imageViewY + imageViewFrame.origin.y
+        let result = CGRect(x: faceX, y: faceY, width: faceWidth, height: faceHeight)
         
-        // Convert to overlay view coordinates (account for scroll offset and content inset)
-        let overlayX = scrollViewX - scrollOffset.x + contentInset.left
-        let overlayY = scrollViewY - scrollOffset.y + contentInset.top
+        print("🔍 [CoordinateTransform] Final screen rect: \(result)")
+        print("🔍 [CoordinateTransform] ==================")
         
-        let screenRect = CGRect(
-            x: overlayX,
-            y: overlayY,
-            width: displayedWidth,
-            height: displayedHeight
-        )
-        
-        print("🔍 [CoordinateTransform] Displayed rect: (\(displayedX), \(displayedY), \(displayedWidth), \(displayedHeight))")
-        print("🔍 [CoordinateTransform] ImageView rect: (\(imageViewX), \(imageViewY), \(displayedWidth), \(displayedHeight))")
-        print("🔍 [CoordinateTransform] ScrollView rect: (\(scrollViewX), \(scrollViewY), \(displayedWidth), \(displayedHeight))")
-        print("🔍 [CoordinateTransform] Screen rect: \(screenRect)")
-        
-        return screenRect
+        return result
     }
 }
