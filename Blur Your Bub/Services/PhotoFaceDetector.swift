@@ -186,42 +186,57 @@ class PhotoFaceDetector {
     
     // Multiple detection strategies with different parameters
     func detectFacesMultiStrategy(in image: UIImage) -> [PhotoDetectedFace] {
-        print("[PhotoFaceDetector] Starting multi-strategy detection...")
+        print("🔍 [PhotoFaceDetector] ===== STARTING FACE DETECTION DEBUG =====")
+        print("🔍 [PhotoFaceDetector] Image size: \(image.size)")
+        print("🔍 [PhotoFaceDetector] Image scale: \(image.scale)")
         
         var allDetectedFaces: [PhotoDetectedFace] = []
         
         // Strategy 1: Standard detection
-        print("[PhotoFaceDetector] Strategy 1: Standard detection")
+        print("🔍 [PhotoFaceDetector] Strategy 1: Standard detection")
         let standardFaces = detectFaces(in: image)
         allDetectedFaces.append(contentsOf: standardFaces)
-        print("[PhotoFaceDetector] Strategy 1 found: \(standardFaces.count) faces")
+        print("🔍 [PhotoFaceDetector] Strategy 1 found: \(standardFaces.count) faces")
         
         // Strategy 2: Landmarks detection
-        print("[PhotoFaceDetector] Strategy 2: Landmarks detection")
+        print("🔍 [PhotoFaceDetector] Strategy 2: Landmarks detection")
         let landmarksFaces = detectFacesWithLandmarks(in: image)
         allDetectedFaces.append(contentsOf: landmarksFaces)
-        print("[PhotoFaceDetector] Strategy 2 found: \(landmarksFaces.count) faces")
+        print("🔍 [PhotoFaceDetector] Strategy 2 found: \(landmarksFaces.count) faces")
         
         // Strategy 3: Aggressive detection with preprocessing
-        print("[PhotoFaceDetector] Strategy 3: Aggressive detection")
+        print("🔍 [PhotoFaceDetector] Strategy 3: Aggressive detection")
         let aggressiveFaces = detectFacesAggressive(in: image)
         allDetectedFaces.append(contentsOf: aggressiveFaces)
-        print("[PhotoFaceDetector] Strategy 3 found: \(aggressiveFaces.count) faces")
+        print("🔍 [PhotoFaceDetector] Strategy 3 found: \(aggressiveFaces.count) faces")
         
         // Strategy 4: Try with different image orientations
-        print("[PhotoFaceDetector] Strategy 4: Multiple orientations")
+        print("🔍 [PhotoFaceDetector] Strategy 4: Multiple orientations")
         let orientationFaces = detectFacesWithOrientations(in: image)
         allDetectedFaces.append(contentsOf: orientationFaces)
-        print("[PhotoFaceDetector] Strategy 4 found: \(orientationFaces.count) faces")
+        print("🔍 [PhotoFaceDetector] Strategy 4 found: \(orientationFaces.count) faces")
+        
+        print("🔍 [PhotoFaceDetector] Total before deduplication: \(allDetectedFaces.count) faces")
         
         // Remove duplicates and merge overlapping detections
         let uniqueFaces = mergeOverlappingFaces(allDetectedFaces)
-        print("[PhotoFaceDetector] Multi-strategy total unique faces: \(uniqueFaces.count)")
+        print("🔍 [PhotoFaceDetector] After deduplication: \(uniqueFaces.count) faces")
+        
+        // Debug: Print all detected faces before validation
+        for (index, face) in uniqueFaces.enumerated() {
+            print("🔍 [PhotoFaceDetector] Face \(index + 1) before validation: \(face.boundingBox)")
+        }
         
         // Apply strict validation to filter out false positives
         let validatedFaces = validateAndFilterFaces(uniqueFaces, in: image)
-        print("[PhotoFaceDetector] After validation: \(validatedFaces.count) faces")
+        print("🔍 [PhotoFaceDetector] After validation: \(validatedFaces.count) faces")
         
+        // Debug: Print all validated faces
+        for (index, face) in validatedFaces.enumerated() {
+            print("🔍 [PhotoFaceDetector] Final face \(index + 1): \(face.boundingBox)")
+        }
+        
+        print("🔍 [PhotoFaceDetector] ===== FACE DETECTION DEBUG COMPLETE =====")
         return validatedFaces
     }
     
@@ -392,52 +407,78 @@ class PhotoFaceDetector {
         let box = face.boundingBox
         let imageSize = image.size
         
-        print("[PhotoFaceDetector] Validating face: \(box)")
+        print("🔍 [PhotoFaceDetector] ===== VALIDATING FACE: \(box) =====")
+        print("🔍 [PhotoFaceDetector] Image size: \(imageSize)")
         
         // 1. Check if bounding box is within image bounds
+        print("🔍 [PhotoFaceDetector] Test 1: Image bounds check")
+        print("🔍 [PhotoFaceDetector] Box: minX=\(box.minX), minY=\(box.minY), maxX=\(box.maxX), maxY=\(box.maxY)")
+        print("🔍 [PhotoFaceDetector] Image: width=\(imageSize.width), height=\(imageSize.height)")
+        
         guard box.minX >= 0 && box.minY >= 0 && 
               box.maxX <= imageSize.width && box.maxY <= imageSize.height else {
-            print("[PhotoFaceDetector] ❌ Face outside image bounds: \(box)")
+            print("🔍 [PhotoFaceDetector] ❌ FAILED: Face outside image bounds")
             return false
         }
+        print("🔍 [PhotoFaceDetector] ✅ PASSED: Image bounds check")
         
         // 2. Check minimum size requirements (very strict)
-        let minFaceSize: CGFloat = 100.0 // Even larger minimum
+        print("🔍 [PhotoFaceDetector] Test 2: Minimum size check")
+        let minFaceSize: CGFloat = 100.0
+        print("🔍 [PhotoFaceDetector] Box size: \(box.size), Min required: \(minFaceSize)")
+        
         guard box.width >= minFaceSize && box.height >= minFaceSize else {
-            print("[PhotoFaceDetector] ❌ Face too small: \(box.size)")
+            print("🔍 [PhotoFaceDetector] ❌ FAILED: Face too small")
             return false
         }
+        print("🔍 [PhotoFaceDetector] ✅ PASSED: Minimum size check")
         
         // 3. Check maximum size requirements (avoid detecting entire bodies)
-        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.3 // Even smaller max
+        print("🔍 [PhotoFaceDetector] Test 3: Maximum size check")
+        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.3
+        print("🔍 [PhotoFaceDetector] Box size: \(box.size), Max allowed: \(maxFaceSize)")
+        
         guard box.width <= maxFaceSize && box.height <= maxFaceSize else {
-            print("[PhotoFaceDetector] ❌ Face too large (likely body): \(box.size)")
+            print("🔍 [PhotoFaceDetector] ❌ FAILED: Face too large (likely body)")
             return false
         }
+        print("🔍 [PhotoFaceDetector] ✅ PASSED: Maximum size check")
         
         // 4. Check aspect ratio (faces should be roughly square-ish)
+        print("🔍 [PhotoFaceDetector] Test 4: Aspect ratio check")
         let aspectRatio = box.width / box.height
-        guard aspectRatio >= 0.7 && aspectRatio <= 1.5 else { // Even stricter ratio
-            print("[PhotoFaceDetector] ❌ Invalid aspect ratio: \(aspectRatio)")
+        print("🔍 [PhotoFaceDetector] Aspect ratio: \(aspectRatio)")
+        
+        guard aspectRatio >= 0.7 && aspectRatio <= 1.5 else {
+            print("🔍 [PhotoFaceDetector] ❌ FAILED: Invalid aspect ratio")
             return false
         }
+        print("🔍 [PhotoFaceDetector] ✅ PASSED: Aspect ratio check")
         
         // 5. Check if the area is not in the extreme edges (likely false positive)
+        print("🔍 [PhotoFaceDetector] Test 5: Edge margin check")
         let edgeMargin: CGFloat = 50.0
+        print("🔍 [PhotoFaceDetector] Edge margin: \(edgeMargin)")
+        print("🔍 [PhotoFaceDetector] Box position: minX=\(box.minX), minY=\(box.minY), maxX=\(box.maxX), maxY=\(box.maxY)")
+        print("🔍 [PhotoFaceDetector] Allowed range: X=[\(edgeMargin), \(imageSize.width - edgeMargin)], Y=[\(edgeMargin), \(imageSize.height - edgeMargin)]")
+        
         guard box.minX >= edgeMargin && box.minY >= edgeMargin &&
               box.maxX <= (imageSize.width - edgeMargin) && 
               box.maxY <= (imageSize.height - edgeMargin) else {
-            print("[PhotoFaceDetector] ❌ Face too close to image edges: \(box)")
+            print("🔍 [PhotoFaceDetector] ❌ FAILED: Face too close to image edges")
             return false
         }
+        print("🔍 [PhotoFaceDetector] ✅ PASSED: Edge margin check")
         
         // 6. Simple skin tone check (much simpler than before)
+        print("🔍 [PhotoFaceDetector] Test 6: Skin tone check")
         guard hasBasicSkinTone(in: box, of: image) else {
-            print("[PhotoFaceDetector] ❌ No skin tone detected")
+            print("🔍 [PhotoFaceDetector] ❌ FAILED: No skin tone detected")
             return false
         }
+        print("🔍 [PhotoFaceDetector] ✅ PASSED: Skin tone check")
         
-        print("[PhotoFaceDetector] ✅ Face validation passed: \(box)")
+        print("🔍 [PhotoFaceDetector] ✅ ALL TESTS PASSED - Face is valid!")
         return true
     }
     
@@ -696,7 +737,12 @@ class PhotoFaceDetector {
     
     // Simplified skin tone detection
     private func hasBasicSkinTone(in box: CGRect, of image: UIImage) -> Bool {
-        guard let cgImage = image.cgImage else { return false }
+        print("🔍 [PhotoFaceDetector] Starting skin tone analysis for box: \(box)")
+        
+        guard let cgImage = image.cgImage else { 
+            print("🔍 [PhotoFaceDetector] ❌ Failed to get CGImage")
+            return false 
+        }
         
         // Crop the area
         let cropRect = CGRect(
@@ -706,7 +752,14 @@ class PhotoFaceDetector {
             height: box.height * image.scale
         )
         
-        guard let croppedCGImage = cgImage.cropping(to: cropRect) else { return false }
+        print("🔍 [PhotoFaceDetector] Crop rect: \(cropRect)")
+        
+        guard let croppedCGImage = cgImage.cropping(to: cropRect) else { 
+            print("🔍 [PhotoFaceDetector] ❌ Failed to crop image")
+            return false 
+        }
+        
+        print("🔍 [PhotoFaceDetector] Cropped image size: \(croppedCGImage.width) x \(croppedCGImage.height)")
         
         // Convert to RGB for color analysis
         let width = Int(croppedCGImage.width)
@@ -720,16 +773,22 @@ class PhotoFaceDetector {
                                     bytesPerRow: bytesPerRow,
                                     space: CGColorSpaceCreateDeviceRGB(),
                                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            print("🔍 [PhotoFaceDetector] ❌ Failed to create RGB context")
             return false
         }
         
         context.draw(croppedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
         
-        guard let data = context.data else { return false }
+        guard let data = context.data else { 
+            print("🔍 [PhotoFaceDetector] ❌ Failed to get image data")
+            return false 
+        }
         let buffer = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
         
         var skinTonePixels = 0
         let pixelCount = width * height
+        
+        print("🔍 [PhotoFaceDetector] Analyzing \(pixelCount) pixels for skin tone...")
         
         for i in stride(from: 0, to: pixelCount * 4, by: 4) {
             let r = Double(buffer[i])
@@ -745,7 +804,13 @@ class PhotoFaceDetector {
         let skinToneRatio = Double(skinTonePixels) / Double(pixelCount)
         let minSkinToneRatio: Double = 0.15 // Lower threshold for basic detection
         
-        return skinToneRatio > minSkinToneRatio
+        print("🔍 [PhotoFaceDetector] Skin tone pixels: \(skinTonePixels)/\(pixelCount) = \(skinToneRatio * 100)%")
+        print("🔍 [PhotoFaceDetector] Minimum required: \(minSkinToneRatio * 100)%")
+        
+        let result = skinToneRatio > minSkinToneRatio
+        print("🔍 [PhotoFaceDetector] Skin tone check result: \(result ? "PASS" : "FAIL")")
+        
+        return result
     }
     
     // Very basic skin tone detection
