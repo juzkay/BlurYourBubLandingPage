@@ -435,7 +435,7 @@ class PhotoFaceDetector {
         
         // 3. Check maximum size requirements (avoid detecting entire bodies)
         print("🔍 [PhotoFaceDetector] Test 3: Maximum size check")
-        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.3
+        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.5 // Increased from 0.3
         print("🔍 [PhotoFaceDetector] Box size: \(box.size), Max allowed: \(maxFaceSize)")
         
         guard box.width <= maxFaceSize && box.height <= maxFaceSize else {
@@ -449,7 +449,7 @@ class PhotoFaceDetector {
         let aspectRatio = box.width / box.height
         print("🔍 [PhotoFaceDetector] Aspect ratio: \(aspectRatio)")
         
-        guard aspectRatio >= 0.7 && aspectRatio <= 1.5 else {
+        guard aspectRatio >= 0.5 && aspectRatio <= 2.0 else { // Much more permissive
             print("🔍 [PhotoFaceDetector] ❌ FAILED: Invalid aspect ratio")
             return false
         }
