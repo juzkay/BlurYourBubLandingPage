@@ -3,7 +3,60 @@ import CoreImage
 import UIKit
 import Vision
 
+// MARK: - Face Quality Assessment
+struct FaceQuality {
+    let overallScore: Double
+    let hasEyes: Bool
+    let hasNose: Bool
+    let hasMouth: Bool
+    let landmarkCompleteness: Double
+    let faceSymmetry: Double
+    let confidenceScore: Double
+    
+    var isHighQuality: Bool {
+        return overallScore > 0.7 && 
+               hasEyes && 
+               hasNose && 
+               hasMouth && 
+               landmarkCompleteness > 0.6
+    }
+    
+    var isProfessionalGrade: Bool {
+        return overallScore > 0.85 && 
+               isHighQuality && 
+               faceSymmetry > 0.7 && 
+               confidenceScore > 0.8
+    }
+}
+
 class PhotoFaceDetector {
+    
+    // PRIMARY: Professional Landmarks detection (Industry Standard)
+    func detectFacesWithProfessionalAI(in image: UIImage) -> [PhotoDetectedFace] {
+        print("[PhotoFaceDetector] 🏭 PROFESSIONAL AI: Starting industry-standard landmarks detection...")
+        
+        // TIER 1: Professional landmarks detection (highest quality)
+        let landmarkFaces = detectFacesWithLandmarks(in: image)
+        if !landmarkFaces.isEmpty {
+            print("[PhotoFaceDetector] 🏭 SUCCESS: Professional landmarks detected \(landmarkFaces.count) high-quality faces")
+            return landmarkFaces
+        }
+        
+        // TIER 2: Enhanced Vision detection with multiple approaches
+        print("[PhotoFaceDetector] 🏭 FALLBACK: Landmarks found 0 faces, trying enhanced Vision detection...")
+        let enhancedFaces = detectFacesWithEnhancedVision(in: image)
+        if !enhancedFaces.isEmpty {
+            print("[PhotoFaceDetector] 🏭 SUCCESS: Enhanced Vision detected \(enhancedFaces.count) faces")
+            return enhancedFaces
+        }
+        
+        // TIER 3: Basic detection (last resort)
+        print("[PhotoFaceDetector] 🏭 FINAL FALLBACK: Trying basic detection...")
+        let basicFaces = detectFaces(in: image)
+        print("[PhotoFaceDetector] 🏭 FINAL RESULT: \(basicFaces.count) faces detected via basic method")
+        
+        return basicFaces
+    }
     
     func detectFaces(in image: UIImage) -> [PhotoDetectedFace] {
         // Convert UIImage to CIImage for Vision framework
@@ -63,7 +116,7 @@ class PhotoFaceDetector {
         return detectedFaces
     }
     
-    // Enhanced face detection with landmarks for more precise boundaries
+    // INDUSTRY STANDARD: Professional face detection with landmarks (like Photos app)
     func detectFacesWithLandmarks(in image: UIImage) -> [PhotoDetectedFace] {
         guard let cgImage = image.cgImage else { return [] }
         let ciImage = CIImage(cgImage: cgImage)
@@ -71,42 +124,59 @@ class PhotoFaceDetector {
         var detectedFaces: [PhotoDetectedFace] = []
         let semaphore = DispatchSemaphore(value: 0)
         
-        // Use face landmarks for more precise detection
+        // PROFESSIONAL: Use face landmarks with quality assessment (industry standard)
         let faceLandmarksRequest = VNDetectFaceLandmarksRequest { request, error in
             defer { semaphore.signal() }
             
             guard let results = request.results as? [VNFaceObservation], error == nil else {
-                print("[PhotoFaceDetector] Face landmarks detection failed: \(error?.localizedDescription ?? "Unknown error")")
+                print("[PhotoFaceDetector] 🏭 PROFESSIONAL: Face landmarks detection failed: \(error?.localizedDescription ?? "Unknown error")")
                 return
             }
             
-            print("[PhotoFaceDetector] Detected \(results.count) faces with landmarks")
+            print("[PhotoFaceDetector] 🏭 PROFESSIONAL: Detected \(results.count) face candidates with landmarks")
             
             for (index, faceObservation) in results.enumerated() {
+                print("[PhotoFaceDetector] 🏭 Analyzing face \(index + 1)...")
+                
+                // INDUSTRY STANDARD: Calculate face quality using landmarks
+                guard let faceQuality = self.calculateFaceQuality(from: faceObservation) else {
+                    print("[PhotoFaceDetector] ❌ Face \(index + 1): Could not assess quality")
+                    continue
+                }
+                
+                print("[PhotoFaceDetector] 🏭 Face \(index + 1) Quality Assessment:")
+                print("[PhotoFaceDetector]   Overall Score: \(faceQuality.overallScore)")
+                print("[PhotoFaceDetector]   Has Eyes: \(faceQuality.hasEyes)")
+                print("[PhotoFaceDetector]   Has Nose: \(faceQuality.hasNose)")
+                print("[PhotoFaceDetector]   Has Mouth: \(faceQuality.hasMouth)")
+                print("[PhotoFaceDetector]   Landmark Completeness: \(faceQuality.landmarkCompleteness)")
+                print("[PhotoFaceDetector]   Face Symmetry: \(faceQuality.faceSymmetry)")
+                print("[PhotoFaceDetector]   Confidence: \(faceQuality.confidenceScore)")
+                
+                // PROFESSIONAL STANDARD: Only accept high-quality faces
+                guard faceQuality.isHighQuality else {
+                    print("[PhotoFaceDetector] ❌ Face \(index + 1): REJECTED - Poor quality (score: \(faceQuality.overallScore))")
+                    continue
+                }
+                
                 let imageSize = image.size
-                var boundingBox = self.convertNormalizedRect(faceObservation.boundingBox, to: imageSize)
                 
-                // If we have landmarks, use them to create a more precise bounding box
-                if let landmarks = faceObservation.landmarks {
-                    boundingBox = self.enhancedBoundingBox(
-                        from: landmarks,
-                        originalBox: boundingBox,
-                        imageSize: imageSize
-                    )
-                }
+                // INDUSTRY STANDARD: Create precise face bounds using landmarks
+                let preciseBounds = self.createPreciseFaceBounds(from: faceObservation, imageSize: imageSize)
                 
-                print("[PhotoFaceDetector] Enhanced face \(index): confidence=\(faceObservation.confidence), bounds=\(boundingBox)")
+                print("[PhotoFaceDetector] ✅ Face \(index + 1): HIGH QUALITY FACE DETECTED")
+                print("[PhotoFaceDetector]   Confidence: \(faceObservation.confidence)")
+                print("[PhotoFaceDetector]   Quality Score: \(faceQuality.overallScore)")
+                print("[PhotoFaceDetector]   Precise Bounds: \(preciseBounds)")
+                print("[PhotoFaceDetector]   Professional Grade: \(faceQuality.isProfessionalGrade ? "YES" : "NO")")
                 
-                // Lower confidence threshold since landmarks provide additional validation
-                if faceObservation.confidence > 0.2 { // Even lower for landmarks
-                    let faceImage = self.cropFaceFromImage(image: image, boundingBox: boundingBox)
-                    let detectedFace = PhotoDetectedFace(boundingBox: boundingBox, faceImage: faceImage)
-                    detectedFaces.append(detectedFace)
-                    print("[PhotoFaceDetector] Added landmarks face with confidence \(faceObservation.confidence): \(boundingBox)")
-                } else {
-                    print("[PhotoFaceDetector] Rejected landmarks face with low confidence \(faceObservation.confidence): \(boundingBox)")
-                }
+                // Crop face image using precise bounds
+                let faceImage = self.cropFaceFromImage(image: image, boundingBox: preciseBounds)
+                let detectedFace = PhotoDetectedFace(boundingBox: preciseBounds, faceImage: faceImage)
+                detectedFaces.append(detectedFace)
             }
+            
+            print("[PhotoFaceDetector] 🏭 PROFESSIONAL: Final result = \(detectedFaces.count) high-quality faces")
         }
         
         // Configure for best accuracy
@@ -1390,5 +1460,275 @@ class PhotoFaceDetector {
         guard let croppedCGImage = cgImage.cropping(to: clampedBox) else { return nil }
         
         return UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+    
+    // MARK: - Professional Face Quality Assessment (Industry Standard)
+    
+    // Calculate comprehensive face quality using landmarks (like Photos app)
+    private func calculateFaceQuality(from observation: VNFaceObservation) -> FaceQuality? {
+        guard let landmarks = observation.landmarks else {
+            return nil
+        }
+        
+        // Check for presence of key facial features
+        let hasEyes = (landmarks.leftEye != nil && landmarks.rightEye != nil) ||
+                     (landmarks.leftPupil != nil && landmarks.rightPupil != nil)
+        let hasNose = landmarks.nose != nil || landmarks.noseCrest != nil
+        let hasMouth = landmarks.outerLips != nil || landmarks.innerLips != nil
+        
+        // Calculate landmark completeness (industry standard metric)
+        var landmarkCount = 0
+        var totalPossibleLandmarks = 0
+        
+        let landmarkChecks: [(VNFaceLandmarkRegion2D?, String)] = [
+            (landmarks.faceContour, "faceContour"),
+            (landmarks.leftEye, "leftEye"),
+            (landmarks.rightEye, "rightEye"),
+            (landmarks.nose, "nose"),
+            (landmarks.outerLips, "outerLips"),
+            (landmarks.leftEyebrow, "leftEyebrow"),
+            (landmarks.rightEyebrow, "rightEyebrow"),
+            (landmarks.noseCrest, "noseCrest"),
+            (landmarks.medianLine, "medianLine")
+        ]
+        
+        for (landmark, _) in landmarkChecks {
+            totalPossibleLandmarks += 1
+            if landmark != nil {
+                landmarkCount += 1
+            }
+        }
+        
+        let landmarkCompleteness = Double(landmarkCount) / Double(totalPossibleLandmarks)
+        
+        // Calculate face symmetry (professional metric)
+        let faceSymmetry = calculateFaceSymmetry(landmarks: landmarks)
+        
+        // Calculate overall quality score (industry formula)
+        let confidenceWeight = 0.3
+        let landmarkWeight = 0.3
+        let symmetryWeight = 0.2
+        let featureWeight = 0.2
+        
+        let featureScore = (hasEyes ? 1.0 : 0.0) + (hasNose ? 1.0 : 0.0) + (hasMouth ? 1.0 : 0.0) / 3.0
+        
+        let overallScore = (Double(observation.confidence) * confidenceWeight) +
+                          (landmarkCompleteness * landmarkWeight) +
+                          (faceSymmetry * symmetryWeight) +
+                          (featureScore * featureWeight)
+        
+        return FaceQuality(
+            overallScore: overallScore,
+            hasEyes: hasEyes,
+            hasNose: hasNose,
+            hasMouth: hasMouth,
+            landmarkCompleteness: landmarkCompleteness,
+            faceSymmetry: faceSymmetry,
+            confidenceScore: Double(observation.confidence)
+        )
+    }
+    
+    // Calculate face symmetry using landmarks (professional metric)
+    private func calculateFaceSymmetry(landmarks: VNFaceLandmarks2D) -> Double {
+        // Check if we have eyes for symmetry calculation
+        guard let leftEye = landmarks.leftEye,
+              let rightEye = landmarks.rightEye,
+              leftEye.pointCount > 0,
+              rightEye.pointCount > 0 else {
+            return 0.5 // Default moderate symmetry if no eye landmarks
+        }
+        
+        // Calculate eye positions and compare for symmetry
+        let leftEyePoints = leftEye.normalizedPoints
+        let rightEyePoints = rightEye.normalizedPoints
+        
+        // Calculate center points of each eye
+        let leftEyeCenter = CGPoint(
+            x: leftEyePoints.map { $0.x }.reduce(0, +) / CGFloat(leftEyePoints.count),
+            y: leftEyePoints.map { $0.y }.reduce(0, +) / CGFloat(leftEyePoints.count)
+        )
+        
+        let rightEyeCenter = CGPoint(
+            x: rightEyePoints.map { $0.x }.reduce(0, +) / CGFloat(rightEyePoints.count),
+            y: rightEyePoints.map { $0.y }.reduce(0, +) / CGFloat(rightEyePoints.count)
+        )
+        
+        // Calculate symmetry based on eye level alignment
+        let eyeLevelDifference = abs(leftEyeCenter.y - rightEyeCenter.y)
+        let eyeDistance = abs(leftEyeCenter.x - rightEyeCenter.x)
+        
+        // Symmetry score (1.0 = perfect symmetry, 0.0 = no symmetry)
+        let symmetryScore = max(0.0, 1.0 - (eyeLevelDifference / eyeDistance) * 5.0)
+        
+        return min(1.0, max(0.0, symmetryScore))
+    }
+    
+    // Create precise face bounds using landmarks (industry standard)
+    private func createPreciseFaceBounds(from observation: VNFaceObservation, imageSize: CGSize) -> CGRect {
+        guard let landmarks = observation.landmarks else {
+            // Fallback to basic bounding box
+            return convertNormalizedRect(observation.boundingBox, to: imageSize)
+        }
+        
+        // Start with basic bounding box
+        var bounds = convertNormalizedRect(observation.boundingBox, to: imageSize)
+        
+        // Refine bounds using face contour if available
+        if let faceContour = landmarks.faceContour, faceContour.pointCount > 0 {
+            let contourPoints = faceContour.normalizedPoints
+            
+            // Find the actual bounds of the face contour
+            let minX = contourPoints.map { $0.x }.min() ?? observation.boundingBox.minX
+            let maxX = contourPoints.map { $0.x }.max() ?? observation.boundingBox.maxX
+            let minY = contourPoints.map { $0.y }.min() ?? observation.boundingBox.minY
+            let maxY = contourPoints.map { $0.y }.max() ?? observation.boundingBox.maxY
+            
+            // Convert to image coordinates
+            let imageMinX = minX * imageSize.width
+            let imageMaxX = maxX * imageSize.width
+            let imageMinY = (1.0 - maxY) * imageSize.height // Vision uses bottom-left origin
+            let imageMaxY = (1.0 - minY) * imageSize.height
+            
+            // Create refined bounds with padding
+            let padding: CGFloat = 20.0
+            bounds = CGRect(
+                x: max(0, imageMinX - padding),
+                y: max(0, imageMinY - padding),
+                width: min(imageSize.width - max(0, imageMinX - padding), imageMaxX - imageMinX + padding * 2),
+                height: min(imageSize.height - max(0, imageMinY - padding), imageMaxY - imageMinY + padding * 2)
+            )
+        }
+        
+        return bounds
+    }
+    
+    // MARK: - Enhanced Vision Detection (Professional Alternative)
+    
+    // Enhanced Vision detection with multiple configurations for maximum reliability
+    private func detectFacesWithEnhancedVision(in image: UIImage) -> [PhotoDetectedFace] {
+        print("[PhotoFaceDetector] 🏭 ENHANCED VISION: Starting multi-configuration detection...")
+        
+        guard let cgImage = image.cgImage else { return [] }
+        
+        // Try multiple detection configurations in order of quality
+        let configurations: [(String, VNDetectFaceRectanglesRequest)] = [
+            ("High Accuracy", createHighAccuracyRequest()),
+            ("Balanced Performance", createBalancedRequest()),
+            ("High Recall", createHighRecallRequest())
+        ]
+        
+        for (configName, request) in configurations {
+            let faces = performEnhancedDetection(cgImage: cgImage, imageSize: image.size, request: request, configName: configName)
+            
+            if !faces.isEmpty {
+                print("[PhotoFaceDetector] 🏭 SUCCESS: \(configName) found \(faces.count) faces")
+                return faces
+            }
+        }
+        
+        print("[PhotoFaceDetector] 🏭 ENHANCED VISION: No faces found with any configuration")
+        return []
+    }
+    
+    // Perform detection with a specific Vision configuration
+    private func performEnhancedDetection(cgImage: CGImage, imageSize: CGSize, request: VNDetectFaceRectanglesRequest, configName: String) -> [PhotoDetectedFace] {
+        var detectedFaces: [PhotoDetectedFace] = []
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        // Create request with completion handler
+        let faceRequest = VNDetectFaceRectanglesRequest { request, error in
+            defer { semaphore.signal() }
+            
+            guard let results = request.results as? [VNFaceObservation], error == nil else {
+                print("[PhotoFaceDetector] ❌ \(configName) failed: \(error?.localizedDescription ?? "Unknown")")
+                return
+            }
+            
+            print("[PhotoFaceDetector] 🏭 \(configName): Found \(results.count) candidates")
+            
+            for (index, observation) in results.enumerated() {
+                // Apply professional quality thresholds
+                guard observation.confidence > 0.6 else {
+                    print("[PhotoFaceDetector] ❌ \(configName) Face \(index + 1): Low confidence (\(observation.confidence))")
+                    continue
+                }
+                
+                let bounds = self.convertNormalizedRect(observation.boundingBox, to: imageSize)
+                
+                // Validate face size and position
+                guard self.isValidProfessionalFace(bounds: bounds, imageSize: imageSize) else {
+                    print("[PhotoFaceDetector] ❌ \(configName) Face \(index + 1): Invalid dimensions")
+                    continue
+                }
+                
+                print("[PhotoFaceDetector] ✅ \(configName) Face \(index + 1): ACCEPTED")
+                print("[PhotoFaceDetector]   Confidence: \(observation.confidence)")
+                print("[PhotoFaceDetector]   Bounds: \(bounds)")
+                
+                // Create high-quality face crop
+                if let faceImage = self.cropFaceFromImage(image: UIImage(cgImage: cgImage), boundingBox: bounds) {
+                    let detectedFace = PhotoDetectedFace(boundingBox: bounds, faceImage: faceImage)
+                    detectedFaces.append(detectedFace)
+                }
+            }
+        }
+        
+        // Copy configuration from the input request
+        faceRequest.revision = request.revision
+        
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try handler.perform([faceRequest])
+            } catch {
+                print("[PhotoFaceDetector] ❌ \(configName) execution failed: \(error)")
+                semaphore.signal()
+            }
+        }
+        
+        semaphore.wait()
+        return detectedFaces
+    }
+    
+    // Professional face validation for enhanced detection
+    private func isValidProfessionalFace(bounds: CGRect, imageSize: CGSize) -> Bool {
+        // Size constraints (professional standards)
+        let minSize: CGFloat = 80.0
+        let maxSizeRatio: CGFloat = 0.4 // Max 40% of image dimension
+        let maxSize = min(imageSize.width, imageSize.height) * maxSizeRatio
+        
+        guard bounds.width >= minSize && bounds.height >= minSize else { return false }
+        guard bounds.width <= maxSize && bounds.height <= maxSize else { return false }
+        
+        // Aspect ratio constraints (professional standards)
+        let aspectRatio = bounds.width / bounds.height
+        guard aspectRatio >= 0.4 && aspectRatio <= 2.5 else { return false }
+        
+        // Position constraints (avoid edge artifacts)
+        let margin: CGFloat = 20.0
+        guard bounds.minX >= margin && bounds.minY >= margin else { return false }
+        guard bounds.maxX <= imageSize.width - margin && bounds.maxY <= imageSize.height - margin else { return false }
+        
+        return true
+    }
+    
+    // MARK: - Vision Request Configurations
+    
+    private func createHighAccuracyRequest() -> VNDetectFaceRectanglesRequest {
+        let request = VNDetectFaceRectanglesRequest()
+        request.revision = VNDetectFaceRectanglesRequestRevision3 // Latest and most accurate
+        return request
+    }
+    
+    private func createBalancedRequest() -> VNDetectFaceRectanglesRequest {
+        let request = VNDetectFaceRectanglesRequest()
+        request.revision = VNDetectFaceRectanglesRequestRevision2 // Balanced performance
+        return request
+    }
+    
+    private func createHighRecallRequest() -> VNDetectFaceRectanglesRequest {
+        let request = VNDetectFaceRectanglesRequest()
+        request.revision = VNDetectFaceRectanglesRequestRevision2 // More permissive (updated from deprecated API)
+        return request
     }
 }

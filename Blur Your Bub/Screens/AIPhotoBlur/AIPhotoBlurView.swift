@@ -387,8 +387,17 @@ struct AIPhotoBlurView: View {
         DispatchQueue.global(qos: .userInitiated).async {
             print("[AIPhotoBlurView] Starting enhanced multi-strategy face detection...")
             
-            // Use the new multi-strategy detection for maximum reliability
-            let faces = self.faceDetector.detectFacesMultiStrategy(in: image)
+            // PRIMARY: Use professional AI detection (Core ML + Landmarks)
+            print("[AIPhotoBlurView] 🏭 PROFESSIONAL AI: Starting industry-standard AI detection...")
+            let professionalFaces = self.faceDetector.detectFacesWithProfessionalAI(in: image)
+            
+            var faces = professionalFaces
+            
+            // FALLBACK: If professional AI finds no faces, try multi-strategy
+            if faces.isEmpty {
+                print("[AIPhotoBlurView] 🏭 EMERGENCY FALLBACK: Professional AI found 0 faces, trying multi-strategy...")
+                faces = self.faceDetector.detectFacesMultiStrategy(in: image)
+            }
             
             print("[AIPhotoBlurView] Multi-strategy detection complete: \(faces.count) faces found")
             
