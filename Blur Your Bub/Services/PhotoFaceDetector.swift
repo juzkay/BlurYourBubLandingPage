@@ -370,14 +370,20 @@ class PhotoFaceDetector {
     private func validateAndFilterFaces(_ faces: [PhotoDetectedFace], in image: UIImage) -> [PhotoDetectedFace] {
         var validatedFaces: [PhotoDetectedFace] = []
         
-        for face in faces {
+        print("[PhotoFaceDetector] Starting validation of \(faces.count) detected faces...")
+        
+        for (index, face) in faces.enumerated() {
+            print("[PhotoFaceDetector] Validating face \(index + 1): \(face.boundingBox)")
+            
             if isValidFace(face, in: image) {
                 validatedFaces.append(face)
+                print("[PhotoFaceDetector] ✅ Face \(index + 1) PASSED validation")
             } else {
-                print("[PhotoFaceDetector] Filtered out invalid face: \(face.boundingBox)")
+                print("[PhotoFaceDetector] ❌ Face \(index + 1) FAILED validation")
             }
         }
         
+        print("[PhotoFaceDetector] Validation complete: \(validatedFaces.count)/\(faces.count) faces passed")
         return validatedFaces
     }
     
@@ -395,15 +401,15 @@ class PhotoFaceDetector {
             return false
         }
         
-        // 2. Check minimum size requirements (more strict)
-        let minFaceSize: CGFloat = 80.0 // Increased minimum size
+        // 2. Check minimum size requirements (very strict)
+        let minFaceSize: CGFloat = 100.0 // Even larger minimum
         guard box.width >= minFaceSize && box.height >= minFaceSize else {
             print("[PhotoFaceDetector] ❌ Face too small: \(box.size)")
             return false
         }
         
         // 3. Check maximum size requirements (avoid detecting entire bodies)
-        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.4
+        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.3 // Even smaller max
         guard box.width <= maxFaceSize && box.height <= maxFaceSize else {
             print("[PhotoFaceDetector] ❌ Face too large (likely body): \(box.size)")
             return false
@@ -411,32 +417,23 @@ class PhotoFaceDetector {
         
         // 4. Check aspect ratio (faces should be roughly square-ish)
         let aspectRatio = box.width / box.height
-        guard aspectRatio >= 0.6 && aspectRatio <= 1.8 else {
+        guard aspectRatio >= 0.7 && aspectRatio <= 1.5 else { // Even stricter ratio
             print("[PhotoFaceDetector] ❌ Invalid aspect ratio: \(aspectRatio)")
             return false
         }
         
-        // 5. Check if the area has sufficient detail (not just flat color/text)
-        guard hasSufficientDetail(in: box, of: image) else {
-            print("[PhotoFaceDetector] ❌ Insufficient detail in face area")
+        // 5. Check if the area is not in the extreme edges (likely false positive)
+        let edgeMargin: CGFloat = 50.0
+        guard box.minX >= edgeMargin && box.minY >= edgeMargin &&
+              box.maxX <= (imageSize.width - edgeMargin) && 
+              box.maxY <= (imageSize.height - edgeMargin) else {
+            print("[PhotoFaceDetector] ❌ Face too close to image edges: \(box)")
             return false
         }
         
-        // 6. Check if the area looks like a face (enhanced skin tone detection)
-        guard hasFaceLikeCharacteristics(in: box, of: image) else {
-            print("[PhotoFaceDetector] ❌ Area doesn't have face-like characteristics")
-            return false
-        }
-        
-        // 7. Check if the area is not text/logo (new validation)
-        guard !isLikelyTextOrLogo(in: box, of: image) else {
-            print("[PhotoFaceDetector] ❌ Area likely contains text or logo")
-            return false
-        }
-        
-        // 8. Check if the area is not a flat color region
-        guard !isFlatColorRegion(in: box, of: image) else {
-            print("[PhotoFaceDetector] ❌ Area is flat color (likely background)")
+        // 6. Simple skin tone check (much simpler than before)
+        guard hasBasicSkinTone(in: box, of: image) else {
+            print("[PhotoFaceDetector] ❌ No skin tone detected")
             return false
         }
         
@@ -695,6 +692,66 @@ class PhotoFaceDetector {
         
         // Low variance indicates flat color
         return totalVariance < 500.0
+    }
+    
+    // Simplified skin tone detection
+    private func hasBasicSkinTone(in box: CGRect, of image: UIImage) -> Bool {
+        guard let cgImage = image.cgImage else { return false }
+        
+        // Crop the area
+        let cropRect = CGRect(
+            x: box.minX * image.scale,
+            y: box.minY * image.scale,
+            width: box.width * image.scale,
+            height: box.height * image.scale
+        )
+        
+        guard let croppedCGImage = cgImage.cropping(to: cropRect) else { return false }
+        
+        // Convert to RGB for color analysis
+        let width = Int(croppedCGImage.width)
+        let height = Int(croppedCGImage.height)
+        let bytesPerRow = width * 4
+        
+        guard let context = CGContext(data: nil,
+                                    width: width,
+                                    height: height,
+                                    bitsPerComponent: 8,
+                                    bytesPerRow: bytesPerRow,
+                                    space: CGColorSpaceCreateDeviceRGB(),
+                                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            return false
+        }
+        
+        context.draw(croppedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        guard let data = context.data else { return false }
+        let buffer = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
+        
+        var skinTonePixels = 0
+        let pixelCount = width * height
+        
+        for i in stride(from: 0, to: pixelCount * 4, by: 4) {
+            let r = Double(buffer[i])
+            let g = Double(buffer[i + 1])
+            let b = Double(buffer[i + 2])
+            
+            // Very basic skin tone detection
+            if isBasicSkinTone(r: r, g: g, b: b) {
+                skinTonePixels += 1
+            }
+        }
+        
+        let skinToneRatio = Double(skinTonePixels) / Double(pixelCount)
+        let minSkinToneRatio: Double = 0.15 // Lower threshold for basic detection
+        
+        return skinToneRatio > minSkinToneRatio
+    }
+    
+    // Very basic skin tone detection
+    private func isBasicSkinTone(r: Double, g: Double, b: Double) -> Bool {
+        // Simplified: R should be higher than B, and G should be moderate
+        return r > g && g > b && r > 100 && g > 80 && b < 150
     }
     
     // Convert Vision's normalized coordinates to image pixel coordinates
