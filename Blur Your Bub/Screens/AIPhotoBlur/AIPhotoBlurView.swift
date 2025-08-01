@@ -261,38 +261,45 @@ struct AIPhotoBlurView: View {
         print("[AIPhotoBlurView] Starting face detection for image size: \(image.size)")
         
         DispatchQueue.global(qos: .userInitiated).async {
-            // Three-tier face detection for maximum accuracy
+            print("[AIPhotoBlurView] Starting enhanced multi-strategy face detection...")
             
-            // Tier 1: Enhanced detection with landmarks (highest accuracy)
-            var faces = self.faceDetector.detectFacesWithLandmarks(in: image)
-            print("[AIPhotoBlurView] Tier 1 (landmarks): \(faces.count) faces found")
+            // Use the new multi-strategy detection for maximum reliability
+            let faces = self.faceDetector.detectFacesMultiStrategy(in: image)
             
-            // Tier 2: Basic Vision detection with standard threshold
+            print("[AIPhotoBlurView] Multi-strategy detection complete: \(faces.count) faces found")
+            
+            // If still no faces found, try individual strategies as fallback
+            var finalFaces = faces
             if faces.isEmpty {
-                print("[AIPhotoBlurView] Trying Tier 2 (basic Vision detection)...")
-                faces = self.faceDetector.detectFaces(in: image)
-                print("[AIPhotoBlurView] Tier 2 (basic): \(faces.count) faces found")
+                print("[AIPhotoBlurView] No faces found with multi-strategy, trying individual fallbacks...")
+                
+                // Try landmarks detection
+                let landmarksFaces = self.faceDetector.detectFacesWithLandmarks(in: image)
+                if !landmarksFaces.isEmpty {
+                    finalFaces = landmarksFaces
+                    print("[AIPhotoBlurView] Fallback landmarks found: \(landmarksFaces.count) faces")
+                } else {
+                    // Try aggressive detection
+                    let aggressiveFaces = self.faceDetector.detectFacesAggressive(in: image)
+                    if !aggressiveFaces.isEmpty {
+                        finalFaces = aggressiveFaces
+                        print("[AIPhotoBlurView] Fallback aggressive found: \(aggressiveFaces.count) faces")
+                    }
+                }
             }
             
-            // Tier 3: Aggressive detection for challenging photos (low lighting, angles, etc.)
-            if faces.isEmpty {
-                print("[AIPhotoBlurView] Trying Tier 3 (aggressive detection)...")
-                faces = self.faceDetector.detectFacesAggressive(in: image)
-                print("[AIPhotoBlurView] Tier 3 (aggressive): \(faces.count) faces found")
-            }
-            
-            print("[AIPhotoBlurView] Final detection result: \(faces.count) faces found")
+            print("[AIPhotoBlurView] Final detection result: \(finalFaces.count) faces found")
             
             DispatchQueue.main.async {
-                self.detectedFaces = faces
+                self.detectedFaces = finalFaces
                 self.isProcessingFaces = false
                 
                 // Show fallback message if no faces detected
-                if faces.isEmpty {
+                if finalFaces.isEmpty {
                     print("[AIPhotoBlurView] No faces detected, showing alert")
                     self.showNoFacesAlert = true
                 } else {
-                    print("[AIPhotoBlurView] Successfully detected \(faces.count) faces")
+                    print("[AIPhotoBlurView] Successfully detected \(finalFaces.count) faces")
                 }
             }
         }
