@@ -276,37 +276,35 @@ class FaceSelectionOverlayView: UIView {
         }
         
         let zoomScale = scrollView.zoomScale
-        let imageViewBounds = imageView.bounds
+        let imageViewFrame = imageView.frame
         let imageSize = originalImage.size
         
-        // Calculate how the image is scaled within the image view (scaleAspectFit)
-        let scaleX = imageViewBounds.width / imageSize.width
-        let scaleY = imageViewBounds.height / imageSize.height
+        // Calculate the actual displayed image size and position (scaleAspectFit)
+        let scaleX = imageViewFrame.width / imageSize.width
+        let scaleY = imageViewFrame.height / imageSize.height
         let scale = min(scaleX, scaleY)
         
-        // Convert image rect to image view coordinates
+        let displayedImageWidth = imageSize.width * scale
+        let displayedImageHeight = imageSize.height * scale
+        
+        // Calculate the offset to center the image
+        let offsetX = (imageViewFrame.width - displayedImageWidth) / 2
+        let offsetY = (imageViewFrame.height - displayedImageHeight) / 2
+        
+        // Convert image coordinates to image view coordinates
         let imageViewRect = CGRect(
-            x: imageRect.origin.x * scale,
-            y: imageRect.origin.y * scale,
+            x: imageRect.origin.x * scale + offsetX,
+            y: imageRect.origin.y * scale + offsetY,
             width: imageRect.size.width * scale,
             height: imageRect.size.height * scale
         )
         
-        // Convert to scroll view content coordinates
-        let imageViewFrame = imageView.frame
-        let contentRect = CGRect(
-            x: (imageViewRect.origin.x + imageViewFrame.origin.x / zoomScale) * zoomScale,
-            y: (imageViewRect.origin.y + imageViewFrame.origin.y / zoomScale) * zoomScale,
+        // Convert to screen coordinates (accounting for zoom and scroll)
+        let screenRect = CGRect(
+            x: (imageViewRect.origin.x + imageViewFrame.origin.x) * zoomScale - scrollView.contentOffset.x,
+            y: (imageViewRect.origin.y + imageViewFrame.origin.y) * zoomScale - scrollView.contentOffset.y,
             width: imageViewRect.size.width * zoomScale,
             height: imageViewRect.size.height * zoomScale
-        )
-        
-        // Convert to screen coordinates
-        let screenRect = CGRect(
-            x: contentRect.origin.x - scrollView.contentOffset.x,
-            y: contentRect.origin.y - scrollView.contentOffset.y,
-            width: contentRect.size.width,
-            height: contentRect.size.height
         )
         
         return screenRect
