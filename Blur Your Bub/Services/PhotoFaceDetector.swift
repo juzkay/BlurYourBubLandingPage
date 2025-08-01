@@ -923,8 +923,8 @@ class PhotoFaceDetector {
         let skinToneRatio = Double(skinTonePixels) / Double(pixelCount)
         let centerArea = Double(centerRadius * centerRadius) * .pi
         let centerSkinToneRatio = Double(centerSkinTonePixels) / centerArea
-        let minSkinToneRatio: Double = 0.08 // Slightly higher threshold
-        let minCenterSkinToneRatio: Double = 0.15 // Higher threshold for center
+        let minSkinToneRatio: Double = 0.05 // More inclusive for baby faces (reduced from 0.08)
+        let minCenterSkinToneRatio: Double = 0.08 // More inclusive for baby faces (reduced from 0.15)
         
         print("🔍 [PhotoFaceDetector] Enhanced skin tone analysis:")
         print("🔍 [PhotoFaceDetector]   Overall skin tone: \(skinTonePixels)/\(pixelCount) = \(skinToneRatio * 100)%")

@@ -284,7 +284,7 @@ class FaceSelectionOverlayView: UIView {
         }
     }
 
-    // MARK: - Coordinate Transformation
+        // MARK: - Coordinate Transformation
     func convertImageRectToScreenRect(imageRect: CGRect) -> CGRect {
         guard let scrollView = scrollView, let imageView = imageView, let originalImage = originalImage else {
             print("🔍 [CoordinateTransform] ❌ Missing required components")
@@ -294,12 +294,15 @@ class FaceSelectionOverlayView: UIView {
         let zoomScale = scrollView.zoomScale
         let imageViewFrame = imageView.frame
         let imageSize = originalImage.size
+        let scrollOffset = scrollView.contentOffset
+        let contentInset = scrollView.contentInset
         
         print("🔍 [CoordinateTransform] Input imageRect: \(imageRect)")
         print("🔍 [CoordinateTransform] Image size: \(imageSize)")
         print("🔍 [CoordinateTransform] ImageView frame: \(imageViewFrame)")
         print("🔍 [CoordinateTransform] Zoom scale: \(zoomScale)")
-        print("🔍 [CoordinateTransform] Scroll offset: \(scrollView.contentOffset)")
+        print("🔍 [CoordinateTransform] Scroll offset: \(scrollOffset)")
+        print("🔍 [CoordinateTransform] Content inset: \(contentInset)")
         
         // Calculate the actual displayed image size and position (scaleAspectFit)
         let scaleX = imageViewFrame.width / imageSize.width
@@ -309,32 +312,42 @@ class FaceSelectionOverlayView: UIView {
         let displayedImageWidth = imageSize.width * scale
         let displayedImageHeight = imageSize.height * scale
         
-        // Calculate the offset to center the image
+        // Calculate the offset to center the image within the imageView
         let offsetX = (imageViewFrame.width - displayedImageWidth) / 2
         let offsetY = (imageViewFrame.height - displayedImageHeight) / 2
         
         print("🔍 [CoordinateTransform] Scale: \(scale)")
         print("🔍 [CoordinateTransform] Displayed size: \(displayedImageWidth) x \(displayedImageHeight)")
-        print("🔍 [CoordinateTransform] Offset: (\(offsetX), \(offsetY))")
+        print("🔍 [CoordinateTransform] Image offset: (\(offsetX), \(offsetY))")
         
-        // Convert image coordinates to image view coordinates
-        let imageViewRect = CGRect(
-            x: imageRect.origin.x * scale + offsetX,
-            y: imageRect.origin.y * scale + offsetY,
-            width: imageRect.size.width * scale,
-            height: imageRect.size.height * scale
-        )
+        // Convert image coordinates to displayed image coordinates
+        let displayedX = imageRect.origin.x * scale
+        let displayedY = imageRect.origin.y * scale
+        let displayedWidth = imageRect.size.width * scale
+        let displayedHeight = imageRect.size.height * scale
         
-        print("🔍 [CoordinateTransform] ImageView rect: \(imageViewRect)")
+        // Position within the imageView (add centering offset)
+        let imageViewX = displayedX + offsetX
+        let imageViewY = displayedY + offsetY
         
-        // Convert to screen coordinates (accounting for scroll only - zoom already applied)
+        // Convert to scroll view coordinates (add imageView origin)
+        let scrollViewX = imageViewX + imageViewFrame.origin.x
+        let scrollViewY = imageViewY + imageViewFrame.origin.y
+        
+        // Convert to overlay view coordinates (account for scroll offset and content inset)
+        let overlayX = scrollViewX - scrollOffset.x + contentInset.left
+        let overlayY = scrollViewY - scrollOffset.y + contentInset.top
+        
         let screenRect = CGRect(
-            x: imageViewRect.origin.x - scrollView.contentOffset.x,
-            y: imageViewRect.origin.y - scrollView.contentOffset.y,
-            width: imageViewRect.size.width,
-            height: imageViewRect.size.height
+            x: overlayX,
+            y: overlayY,
+            width: displayedWidth,
+            height: displayedHeight
         )
         
+        print("🔍 [CoordinateTransform] Displayed rect: (\(displayedX), \(displayedY), \(displayedWidth), \(displayedHeight))")
+        print("🔍 [CoordinateTransform] ImageView rect: (\(imageViewX), \(imageViewY), \(displayedWidth), \(displayedHeight))")
+        print("🔍 [CoordinateTransform] ScrollView rect: (\(scrollViewX), \(scrollViewY), \(displayedWidth), \(displayedHeight))")
         print("🔍 [CoordinateTransform] Screen rect: \(screenRect)")
         
         return screenRect
