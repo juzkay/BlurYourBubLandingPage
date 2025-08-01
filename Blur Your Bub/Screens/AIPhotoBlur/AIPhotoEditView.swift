@@ -252,19 +252,34 @@ class FaceSelectionOverlayView: UIView {
         
         let context = UIGraphicsGetCurrentContext()
         
-        for face in detectedFaces {
+        print("🔍 [FaceSelectionOverlayView] Drawing \(detectedFaces.count) faces")
+        print("🔍 [FaceSelectionOverlayView] View bounds: \(bounds)")
+        
+        for (index, face) in detectedFaces.enumerated() {
             let screenRect = convertImageRectToScreenRect(imageRect: face.boundingBox)
             
-            // Draw face rectangle
-            let color = face.isSelected ? UIColor.systemGreen : UIColor.systemGray
-            context?.setStrokeColor(color.cgColor)
-            context?.setLineWidth(3.0)
-            context?.stroke(screenRect)
+            print("🔍 [FaceSelectionOverlayView] Face \(index):")
+            print("🔍 [FaceSelectionOverlayView]   Original box: \(face.boundingBox)")
+            print("🔍 [FaceSelectionOverlayView]   Screen rect: \(screenRect)")
+            print("🔍 [FaceSelectionOverlayView]   Is visible: \(bounds.intersects(screenRect))")
             
-            // Draw selection indicator
-            if face.isSelected {
-                context?.setFillColor(UIColor.systemGreen.withAlphaComponent(0.2).cgColor)
-                context?.fill(screenRect)
+            // Only draw if the rectangle is visible
+            if bounds.intersects(screenRect) {
+                // Draw face rectangle
+                let color = face.isSelected ? UIColor.systemGreen : UIColor.systemGray
+                context?.setStrokeColor(color.cgColor)
+                context?.setLineWidth(3.0)
+                context?.stroke(screenRect)
+                
+                // Draw selection indicator
+                if face.isSelected {
+                    context?.setFillColor(UIColor.systemGreen.withAlphaComponent(0.2).cgColor)
+                    context?.fill(screenRect)
+                }
+                
+                print("🔍 [FaceSelectionOverlayView]   ✅ Drew rectangle")
+            } else {
+                print("🔍 [FaceSelectionOverlayView]   ❌ Rectangle outside view bounds")
             }
         }
     }
@@ -272,12 +287,19 @@ class FaceSelectionOverlayView: UIView {
     // MARK: - Coordinate Transformation
     func convertImageRectToScreenRect(imageRect: CGRect) -> CGRect {
         guard let scrollView = scrollView, let imageView = imageView, let originalImage = originalImage else {
+            print("🔍 [CoordinateTransform] ❌ Missing required components")
             return .zero
         }
         
         let zoomScale = scrollView.zoomScale
         let imageViewFrame = imageView.frame
         let imageSize = originalImage.size
+        
+        print("🔍 [CoordinateTransform] Input imageRect: \(imageRect)")
+        print("🔍 [CoordinateTransform] Image size: \(imageSize)")
+        print("🔍 [CoordinateTransform] ImageView frame: \(imageViewFrame)")
+        print("🔍 [CoordinateTransform] Zoom scale: \(zoomScale)")
+        print("🔍 [CoordinateTransform] Scroll offset: \(scrollView.contentOffset)")
         
         // Calculate the actual displayed image size and position (scaleAspectFit)
         let scaleX = imageViewFrame.width / imageSize.width
@@ -291,6 +313,10 @@ class FaceSelectionOverlayView: UIView {
         let offsetX = (imageViewFrame.width - displayedImageWidth) / 2
         let offsetY = (imageViewFrame.height - displayedImageHeight) / 2
         
+        print("🔍 [CoordinateTransform] Scale: \(scale)")
+        print("🔍 [CoordinateTransform] Displayed size: \(displayedImageWidth) x \(displayedImageHeight)")
+        print("🔍 [CoordinateTransform] Offset: (\(offsetX), \(offsetY))")
+        
         // Convert image coordinates to image view coordinates
         let imageViewRect = CGRect(
             x: imageRect.origin.x * scale + offsetX,
@@ -299,6 +325,8 @@ class FaceSelectionOverlayView: UIView {
             height: imageRect.size.height * scale
         )
         
+        print("🔍 [CoordinateTransform] ImageView rect: \(imageViewRect)")
+        
         // Convert to screen coordinates (accounting for zoom and scroll)
         let screenRect = CGRect(
             x: (imageViewRect.origin.x + imageViewFrame.origin.x) * zoomScale - scrollView.contentOffset.x,
@@ -306,6 +334,8 @@ class FaceSelectionOverlayView: UIView {
             width: imageViewRect.size.width * zoomScale,
             height: imageViewRect.size.height * zoomScale
         )
+        
+        print("🔍 [CoordinateTransform] Screen rect: \(screenRect)")
         
         return screenRect
     }
