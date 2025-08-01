@@ -278,6 +278,15 @@ struct AIPhotoBlurView: View {
                 if !landmarksFaces.isEmpty {
                     finalFaces = landmarksFaces
                     print("[AIPhotoBlurView] Fallback landmarks found: \(landmarksFaces.count) faces")
+                    print("🔍 [AIPhotoBlurView] ===== FALLBACK FACES DETAILS =====")
+                    for (index, face) in landmarksFaces.enumerated() {
+                        print("🔍 [AIPhotoBlurView] Fallback face \(index + 1): \(face.boundingBox)")
+                        print("🔍 [AIPhotoBlurView]   Dimensions: \(face.boundingBox.width) x \(face.boundingBox.height)")
+                        print("🔍 [AIPhotoBlurView]   Aspect ratio: \(face.boundingBox.width / face.boundingBox.height)")
+                        print("🔍 [AIPhotoBlurView]   Center: (\(face.boundingBox.midX), \(face.boundingBox.midY))")
+                        print("🔍 [AIPhotoBlurView]   Area: \(face.boundingBox.width * face.boundingBox.height) pixels")
+                    }
+                    print("🔍 [AIPhotoBlurView] ===== END FALLBACK DETAILS =====")
                 } else {
                     // Try aggressive detection
                     let aggressiveFaces = self.faceDetector.detectFacesAggressive(in: image)

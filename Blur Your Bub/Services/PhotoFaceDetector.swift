@@ -234,6 +234,10 @@ class PhotoFaceDetector {
         // Debug: Print all validated faces
         for (index, face) in validatedFaces.enumerated() {
             print("🔍 [PhotoFaceDetector] Final face \(index + 1): \(face.boundingBox)")
+            print("🔍 [PhotoFaceDetector]   Dimensions: \(face.boundingBox.width) x \(face.boundingBox.height)")
+            print("🔍 [PhotoFaceDetector]   Aspect ratio: \(face.boundingBox.width / face.boundingBox.height)")
+            print("🔍 [PhotoFaceDetector]   Center: (\(face.boundingBox.midX), \(face.boundingBox.midY))")
+            print("🔍 [PhotoFaceDetector]   Area: \(face.boundingBox.width * face.boundingBox.height) pixels")
         }
         
         print("🔍 [PhotoFaceDetector] ===== FACE DETECTION DEBUG COMPLETE =====")
@@ -448,9 +452,14 @@ class PhotoFaceDetector {
         print("🔍 [PhotoFaceDetector] Test 4: Aspect ratio check")
         let aspectRatio = box.width / box.height
         print("🔍 [PhotoFaceDetector] Aspect ratio: \(aspectRatio)")
+        print("🔍 [PhotoFaceDetector] Face dimensions: \(box.width) x \(box.height)")
+        print("🔍 [PhotoFaceDetector] Face area: \(box.width * box.height) pixels")
+        print("🔍 [PhotoFaceDetector] Face center: (\(box.midX), \(box.midY))")
         
         guard aspectRatio >= 0.6 && aspectRatio <= 1.8 else { // Tighter range
             print("🔍 [PhotoFaceDetector] ❌ FAILED: Invalid aspect ratio")
+            print("🔍 [PhotoFaceDetector]   Expected: 0.6-1.8, Got: \(aspectRatio)")
+            print("🔍 [PhotoFaceDetector]   This face is too rectangular (width/height ratio)")
             return false
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Aspect ratio check")
@@ -474,6 +483,7 @@ class PhotoFaceDetector {
         print("🔍 [PhotoFaceDetector] Test 6: Enhanced skin tone check")
         guard hasEnhancedSkinTone(in: box, of: image) else {
             print("🔍 [PhotoFaceDetector] ❌ FAILED: No skin tone detected")
+            print("🔍 [PhotoFaceDetector]   This area doesn't contain enough skin tone pixels")
             return false
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Enhanced skin tone check")
@@ -482,6 +492,7 @@ class PhotoFaceDetector {
         print("🔍 [PhotoFaceDetector] Test 7: Face-like features check")
         guard hasFaceLikeFeatures(in: box, of: image) else {
             print("🔍 [PhotoFaceDetector] ❌ FAILED: No face-like features detected")
+            print("🔍 [PhotoFaceDetector]   This area lacks face-like patterns (symmetry, detail)")
             return false
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Face-like features check")
