@@ -292,40 +292,51 @@ class FaceSelectionOverlayView: UIView {
         }
         
         let imageSize = originalImage.size
+        let overlayBounds = self.bounds
+        
         print("🔍 [CoordinateTransform] Input imageRect: \(imageRect)")
         print("🔍 [CoordinateTransform] Original image size: \(imageSize)")
-        print("🔍 [CoordinateTransform] ScrollView bounds: \(scrollView.bounds)")
+        print("🔍 [CoordinateTransform] Overlay bounds: \(overlayBounds)")
+        print("🔍 [CoordinateTransform] ScrollView frame: \(scrollView.frame)")
         print("🔍 [CoordinateTransform] ImageView frame: \(imageView.frame)")
         
-        // Step 1: Calculate how the image is displayed in the scroll view (aspect fit)
-        let scrollViewSize = scrollView.bounds.size
+        // The image view shows the image with aspect fit content mode
+        // Calculate how the image fits within the image view
+        let imageViewSize = imageView.bounds.size
+        let scaleX = imageViewSize.width / imageSize.width
+        let scaleY = imageViewSize.height / imageSize.height
+        let scale = min(scaleX, scaleY)
         
-        // Calculate scale to fit image in scroll view
-        let scaleX = scrollViewSize.width / imageSize.width
-        let scaleY = scrollViewSize.height / imageSize.height
-        let scale = min(scaleX, scaleY) // aspect fit uses minimum scale
-        
-        // Calculate actual displayed image size
+        // Calculate actual displayed image size and position within image view
         let displayedWidth = imageSize.width * scale
         let displayedHeight = imageSize.height * scale
+        let imageOffsetX = (imageViewSize.width - displayedWidth) / 2
+        let imageOffsetY = (imageViewSize.height - displayedHeight) / 2
         
-        // Calculate centering offset
-        let offsetX = (scrollViewSize.width - displayedWidth) / 2
-        let offsetY = (scrollViewSize.height - displayedHeight) / 2
-        
-        print("🔍 [CoordinateTransform] Scale factor: \(scale)")
+        print("🔍 [CoordinateTransform] Scale: \(scale)")
         print("🔍 [CoordinateTransform] Displayed size: \(displayedWidth) x \(displayedHeight)")
-        print("🔍 [CoordinateTransform] Center offset: (\(offsetX), \(offsetY))")
+        print("🔍 [CoordinateTransform] Image offset within view: (\(imageOffsetX), \(imageOffsetY))")
         
-        // Step 2: Convert face coordinates from image space to displayed space
-        let faceX = imageRect.origin.x * scale + offsetX
-        let faceY = imageRect.origin.y * scale + offsetY
-        let faceWidth = imageRect.size.width * scale
-        let faceHeight = imageRect.size.height * scale
+        // Convert face coordinates to image view coordinates
+        let imageViewX = imageRect.origin.x * scale + imageOffsetX
+        let imageViewY = imageRect.origin.y * scale + imageOffsetY
+        let imageViewWidth = imageRect.size.width * scale
+        let imageViewHeight = imageRect.size.height * scale
         
-        let result = CGRect(x: faceX, y: faceY, width: faceWidth, height: faceHeight)
+        // Convert from image view coordinates to scroll view coordinates
+        let scrollViewX = imageViewX + imageView.frame.origin.x
+        let scrollViewY = imageViewY + imageView.frame.origin.y
         
-        print("🔍 [CoordinateTransform] Final screen rect: \(result)")
+        // Convert from scroll view coordinates to overlay coordinates
+        // The overlay view should have the same bounds as the scroll view
+        let overlayX = scrollViewX
+        let overlayY = scrollViewY
+        
+        let result = CGRect(x: overlayX, y: overlayY, width: imageViewWidth, height: imageViewHeight)
+        
+        print("🔍 [CoordinateTransform] Image view rect: (\(imageViewX), \(imageViewY), \(imageViewWidth), \(imageViewHeight))")
+        print("🔍 [CoordinateTransform] Scroll view rect: (\(scrollViewX), \(scrollViewY), \(imageViewWidth), \(imageViewHeight))")
+        print("🔍 [CoordinateTransform] Final overlay rect: \(result)")
         print("🔍 [CoordinateTransform] ==================")
         
         return result
