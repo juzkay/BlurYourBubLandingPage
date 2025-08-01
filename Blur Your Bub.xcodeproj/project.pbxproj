@@ -1,0 +1,700 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D0969D392E3B7B5E0054184A /* BlurPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0969D382E3B7B5E0054184A /* BlurPath.swift */; };
+		D0A9B2B32E31F12900C1ED40 /* VideoBlurViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A9B2B22E31F12900C1ED40 /* VideoBlurViewModel.swift */; };
+		D0A9B2B52E31F13B00C1ED40 /* VideoBlurProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A9B2B42E31F13B00C1ED40 /* VideoBlurProcessor.swift */; };
+		D0A9B2BA2E33120900C1ED40 /* PhotoEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A9B2B92E33120900C1ED40 /* PhotoEditView.swift */; };
+		D0A9B2C22E33294600C1ED40 /* Blur-Your-Bub-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D0A9B2C12E33294600C1ED40 /* Blur-Your-Bub-Info.plist */; };
+		D0A9B2C32E3329F500C1ED40 /* ClashDisplay-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D0A9B2BF2E33258B00C1ED40 /* ClashDisplay-Variable.ttf */; };
+		D0BC5B5C2E2F997800FD43DF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D0BC5B5B2E2F997800FD43DF /* Assets.xcassets */; };
+		D0BC5B5F2E2F997800FD43DF /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D0BC5B5E2E2F997800FD43DF /* Preview Assets.xcassets */; };
+		D0BC5B692E2F997900FD43DF /* Blur_Your_BubTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC5B682E2F997900FD43DF /* Blur_Your_BubTests.swift */; };
+		D0BC5B732E2F997900FD43DF /* Blur_Your_BubUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC5B722E2F997900FD43DF /* Blur_Your_BubUITests.swift */; };
+		D0BC5B752E2F997900FD43DF /* Blur_Your_BubUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC5B742E2F997900FD43DF /* Blur_Your_BubUITestsLaunchTests.swift */; };
+		D0FD30BD2E31F08300251A55 /* Blur_Your_BubApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FD30B22E31F08300251A55 /* Blur_Your_BubApp.swift */; };
+		D0FD30BE2E31F08300251A55 /* VideoBlurScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FD30B62E31F08300251A55 /* VideoBlurScreen.swift */; };
+		D0FD30BF2E31F08300251A55 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FD30B82E31F08300251A55 /* ContentView.swift */; };
+		D0FD30C02E31F08300251A55 /* RealtimeFaceBlurProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FD30BA2E31F08300251A55 /* RealtimeFaceBlurProcessor.swift */; };
+		D0FD30C12E31F08300251A55 /* FaceBlurVideoCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FD30BB2E31F08300251A55 /* FaceBlurVideoCompositor.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D0BC5B652E2F997900FD43DF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0BC5B4C2E2F997800FD43DF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D0BC5B532E2F997800FD43DF;
+			remoteInfo = "Blur Your Bub";
+		};
+		D0BC5B6F2E2F997900FD43DF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D0BC5B4C2E2F997800FD43DF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D0BC5B532E2F997800FD43DF;
+			remoteInfo = "Blur Your Bub";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		D0969D382E3B7B5E0054184A /* BlurPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurPath.swift; sourceTree = "<group>"; };
+		D0A9B2B22E31F12900C1ED40 /* VideoBlurViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoBlurViewModel.swift; sourceTree = "<group>"; };
+		D0A9B2B42E31F13B00C1ED40 /* VideoBlurProcessor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoBlurProcessor.swift; sourceTree = "<group>"; };
+		D0A9B2B92E33120900C1ED40 /* PhotoEditView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoEditView.swift; sourceTree = "<group>"; };
+		D0A9B2BF2E33258B00C1ED40 /* ClashDisplay-Variable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ClashDisplay-Variable.ttf"; sourceTree = "<group>"; };
+		D0A9B2C12E33294600C1ED40 /* Blur-Your-Bub-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "Blur-Your-Bub-Info.plist"; sourceTree = "<group>"; };
+		D0BC5B542E2F997800FD43DF /* Blur Your Bub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Blur Your Bub.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0BC5B5B2E2F997800FD43DF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D0BC5B5E2E2F997800FD43DF /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		D0BC5B642E2F997900FD43DF /* Blur Your BubTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Blur Your BubTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0BC5B682E2F997900FD43DF /* Blur_Your_BubTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Blur_Your_BubTests.swift; sourceTree = "<group>"; };
+		D0BC5B6E2E2F997900FD43DF /* Blur Your BubUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Blur Your BubUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0BC5B722E2F997900FD43DF /* Blur_Your_BubUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Blur_Your_BubUITests.swift; sourceTree = "<group>"; };
+		D0BC5B742E2F997900FD43DF /* Blur_Your_BubUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Blur_Your_BubUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		D0FD30B22E31F08300251A55 /* Blur_Your_BubApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Blur_Your_BubApp.swift; sourceTree = "<group>"; };
+		D0FD30B62E31F08300251A55 /* VideoBlurScreen.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoBlurScreen.swift; sourceTree = "<group>"; };
+		D0FD30B82E31F08300251A55 /* ContentView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		D0FD30BA2E31F08300251A55 /* RealtimeFaceBlurProcessor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RealtimeFaceBlurProcessor.swift; sourceTree = "<group>"; };
+		D0FD30BB2E31F08300251A55 /* FaceBlurVideoCompositor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FaceBlurVideoCompositor.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0BC5B512E2F997800FD43DF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0BC5B612E2F997900FD43DF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0BC5B6B2E2F997900FD43DF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0A9B2B62E326AB300C1ED40 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				D0A9B2BF2E33258B00C1ED40 /* ClashDisplay-Variable.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		D0BC5B4B2E2F997800FD43DF = {
+			isa = PBXGroup;
+			children = (
+				D0BC5B562E2F997800FD43DF /* Blur Your Bub */,
+				D0BC5B672E2F997900FD43DF /* Blur Your BubTests */,
+				D0BC5B712E2F997900FD43DF /* Blur Your BubUITests */,
+				D0BC5B552E2F997800FD43DF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D0BC5B552E2F997800FD43DF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0BC5B542E2F997800FD43DF /* Blur Your Bub.app */,
+				D0BC5B642E2F997900FD43DF /* Blur Your BubTests.xctest */,
+				D0BC5B6E2E2F997900FD43DF /* Blur Your BubUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D0BC5B562E2F997800FD43DF /* Blur Your Bub */ = {
+			isa = PBXGroup;
+			children = (
+				D0A9B2C12E33294600C1ED40 /* Blur-Your-Bub-Info.plist */,
+				D0A9B2B62E326AB300C1ED40 /* Fonts */,
+				D0FD30B12E31F08300251A55 /* App */,
+				D0FD30B32E31F08300251A55 /* Models */,
+				D0FD30B42E31F08300251A55 /* Screens */,
+				D0FD30B92E31F08300251A55 /* Services */,
+				D0FD30BC2E31F08300251A55 /* Utils */,
+				D0BC5B5B2E2F997800FD43DF /* Assets.xcassets */,
+				D0BC5B5D2E2F997800FD43DF /* Preview Content */,
+			);
+			path = "Blur Your Bub";
+			sourceTree = "<group>";
+		};
+		D0BC5B5D2E2F997800FD43DF /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				D0BC5B5E2E2F997800FD43DF /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		D0BC5B672E2F997900FD43DF /* Blur Your BubTests */ = {
+			isa = PBXGroup;
+			children = (
+				D0BC5B682E2F997900FD43DF /* Blur_Your_BubTests.swift */,
+			);
+			path = "Blur Your BubTests";
+			sourceTree = "<group>";
+		};
+		D0BC5B712E2F997900FD43DF /* Blur Your BubUITests */ = {
+			isa = PBXGroup;
+			children = (
+				D0BC5B722E2F997900FD43DF /* Blur_Your_BubUITests.swift */,
+				D0BC5B742E2F997900FD43DF /* Blur_Your_BubUITestsLaunchTests.swift */,
+			);
+			path = "Blur Your BubUITests";
+			sourceTree = "<group>";
+		};
+		D0FD30B12E31F08300251A55 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				D0FD30B22E31F08300251A55 /* Blur_Your_BubApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		D0FD30B32E31F08300251A55 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D0969D382E3B7B5E0054184A /* BlurPath.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D0FD30B42E31F08300251A55 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				D0FD30B52E31F08300251A55 /* VideoBlur */,
+				D0FD30B72E31F08300251A55 /* Content */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		D0FD30B52E31F08300251A55 /* VideoBlur */ = {
+			isa = PBXGroup;
+			children = (
+				D0FD30B62E31F08300251A55 /* VideoBlurScreen.swift */,
+				D0A9B2B22E31F12900C1ED40 /* VideoBlurViewModel.swift */,
+				D0A9B2B42E31F13B00C1ED40 /* VideoBlurProcessor.swift */,
+			);
+			path = VideoBlur;
+			sourceTree = "<group>";
+		};
+		D0FD30B72E31F08300251A55 /* Content */ = {
+			isa = PBXGroup;
+			children = (
+				D0FD30B82E31F08300251A55 /* ContentView.swift */,
+				D0A9B2B92E33120900C1ED40 /* PhotoEditView.swift */,
+			);
+			path = Content;
+			sourceTree = "<group>";
+		};
+		D0FD30B92E31F08300251A55 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				D0FD30BA2E31F08300251A55 /* RealtimeFaceBlurProcessor.swift */,
+				D0FD30BB2E31F08300251A55 /* FaceBlurVideoCompositor.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		D0FD30BC2E31F08300251A55 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D0BC5B532E2F997800FD43DF /* Blur Your Bub */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0BC5B782E2F997900FD43DF /* Build configuration list for PBXNativeTarget "Blur Your Bub" */;
+			buildPhases = (
+				D0BC5B502E2F997800FD43DF /* Sources */,
+				D0BC5B512E2F997800FD43DF /* Frameworks */,
+				D0BC5B522E2F997800FD43DF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Blur Your Bub";
+			productName = "Blur Your Bub";
+			productReference = D0BC5B542E2F997800FD43DF /* Blur Your Bub.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D0BC5B632E2F997900FD43DF /* Blur Your BubTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0BC5B7B2E2F997900FD43DF /* Build configuration list for PBXNativeTarget "Blur Your BubTests" */;
+			buildPhases = (
+				D0BC5B602E2F997900FD43DF /* Sources */,
+				D0BC5B612E2F997900FD43DF /* Frameworks */,
+				D0BC5B622E2F997900FD43DF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D0BC5B662E2F997900FD43DF /* PBXTargetDependency */,
+			);
+			name = "Blur Your BubTests";
+			productName = "Blur Your BubTests";
+			productReference = D0BC5B642E2F997900FD43DF /* Blur Your BubTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		D0BC5B6D2E2F997900FD43DF /* Blur Your BubUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0BC5B7E2E2F997900FD43DF /* Build configuration list for PBXNativeTarget "Blur Your BubUITests" */;
+			buildPhases = (
+				D0BC5B6A2E2F997900FD43DF /* Sources */,
+				D0BC5B6B2E2F997900FD43DF /* Frameworks */,
+				D0BC5B6C2E2F997900FD43DF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D0BC5B702E2F997900FD43DF /* PBXTargetDependency */,
+			);
+			name = "Blur Your BubUITests";
+			productName = "Blur Your BubUITests";
+			productReference = D0BC5B6E2E2F997900FD43DF /* Blur Your BubUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0BC5B4C2E2F997800FD43DF /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1420;
+				LastUpgradeCheck = 1420;
+				TargetAttributes = {
+					D0BC5B532E2F997800FD43DF = {
+						CreatedOnToolsVersion = 14.2;
+					};
+					D0BC5B632E2F997900FD43DF = {
+						CreatedOnToolsVersion = 14.2;
+						TestTargetID = D0BC5B532E2F997800FD43DF;
+					};
+					D0BC5B6D2E2F997900FD43DF = {
+						CreatedOnToolsVersion = 14.2;
+						TestTargetID = D0BC5B532E2F997800FD43DF;
+					};
+				};
+			};
+			buildConfigurationList = D0BC5B4F2E2F997800FD43DF /* Build configuration list for PBXProject "Blur Your Bub" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = D0BC5B4B2E2F997800FD43DF;
+			packageReferences = (
+			);
+			productRefGroup = D0BC5B552E2F997800FD43DF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D0BC5B532E2F997800FD43DF /* Blur Your Bub */,
+				D0BC5B632E2F997900FD43DF /* Blur Your BubTests */,
+				D0BC5B6D2E2F997900FD43DF /* Blur Your BubUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0BC5B522E2F997800FD43DF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0BC5B5F2E2F997800FD43DF /* Preview Assets.xcassets in Resources */,
+				D0A9B2C32E3329F500C1ED40 /* ClashDisplay-Variable.ttf in Resources */,
+				D0A9B2C22E33294600C1ED40 /* Blur-Your-Bub-Info.plist in Resources */,
+				D0BC5B5C2E2F997800FD43DF /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0BC5B622E2F997900FD43DF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0BC5B6C2E2F997900FD43DF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D0BC5B502E2F997800FD43DF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0FD30BE2E31F08300251A55 /* VideoBlurScreen.swift in Sources */,
+				D0A9B2BA2E33120900C1ED40 /* PhotoEditView.swift in Sources */,
+				D0A9B2B52E31F13B00C1ED40 /* VideoBlurProcessor.swift in Sources */,
+				D0A9B2B32E31F12900C1ED40 /* VideoBlurViewModel.swift in Sources */,
+				D0FD30C02E31F08300251A55 /* RealtimeFaceBlurProcessor.swift in Sources */,
+				D0969D392E3B7B5E0054184A /* BlurPath.swift in Sources */,
+				D0FD30BD2E31F08300251A55 /* Blur_Your_BubApp.swift in Sources */,
+				D0FD30BF2E31F08300251A55 /* ContentView.swift in Sources */,
+				D0FD30C12E31F08300251A55 /* FaceBlurVideoCompositor.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0BC5B602E2F997900FD43DF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0BC5B692E2F997900FD43DF /* Blur_Your_BubTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0BC5B6A2E2F997900FD43DF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0BC5B752E2F997900FD43DF /* Blur_Your_BubUITestsLaunchTests.swift in Sources */,
+				D0BC5B732E2F997900FD43DF /* Blur_Your_BubUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D0BC5B662E2F997900FD43DF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D0BC5B532E2F997800FD43DF /* Blur Your Bub */;
+			targetProxy = D0BC5B652E2F997900FD43DF /* PBXContainerItemProxy */;
+		};
+		D0BC5B702E2F997900FD43DF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D0BC5B532E2F997800FD43DF /* Blur Your Bub */;
+			targetProxy = D0BC5B6F2E2F997900FD43DF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		D0BC5B762E2F997900FD43DF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		D0BC5B772E2F997900FD43DF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D0BC5B792E2F997900FD43DF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Blur Your Bub/Preview Content\"";
+				DEVELOPMENT_TEAM = D7538JNA8D;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Blur Your Bub/Blur-Your-Bub-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Blur Your Bub";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to record videos with face blurring.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs microphone access to record audio with videos.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs photo library access to save recorded videos.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs photo library access to select and save videos and photos.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "JUZKAY.Blur-Your-Bub";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D0BC5B7A2E2F997900FD43DF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Blur Your Bub/Preview Content\"";
+				DEVELOPMENT_TEAM = D7538JNA8D;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Blur Your Bub/Blur-Your-Bub-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Blur Your Bub";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access to record videos with face blurring.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs microphone access to record audio with videos.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs photo library access to save recorded videos.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs photo library access to select and save videos and photos.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "JUZKAY.Blur-Your-Bub";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D0BC5B7C2E2F997900FD43DF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "JUZKAY.Blur-Your-BubTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Blur Your Bub.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Blur Your Bub";
+			};
+			name = Debug;
+		};
+		D0BC5B7D2E2F997900FD43DF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "JUZKAY.Blur-Your-BubTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Blur Your Bub.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Blur Your Bub";
+			};
+			name = Release;
+		};
+		D0BC5B7F2E2F997900FD43DF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "JUZKAY.Blur-Your-BubUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Blur Your Bub";
+			};
+			name = Debug;
+		};
+		D0BC5B802E2F997900FD43DF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "JUZKAY.Blur-Your-BubUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Blur Your Bub";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0BC5B4F2E2F997800FD43DF /* Build configuration list for PBXProject "Blur Your Bub" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0BC5B762E2F997900FD43DF /* Debug */,
+				D0BC5B772E2F997900FD43DF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D0BC5B782E2F997900FD43DF /* Build configuration list for PBXNativeTarget "Blur Your Bub" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0BC5B792E2F997900FD43DF /* Debug */,
+				D0BC5B7A2E2F997900FD43DF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D0BC5B7B2E2F997900FD43DF /* Build configuration list for PBXNativeTarget "Blur Your BubTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0BC5B7C2E2F997900FD43DF /* Debug */,
+				D0BC5B7D2E2F997900FD43DF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D0BC5B7E2E2F997900FD43DF /* Build configuration list for PBXNativeTarget "Blur Your BubUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0BC5B7F2E2F997900FD43DF /* Debug */,
+				D0BC5B802E2F997900FD43DF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0BC5B4C2E2F997800FD43DF /* Project object */;
+}
