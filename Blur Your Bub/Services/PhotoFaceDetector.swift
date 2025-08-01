@@ -534,22 +534,29 @@ class PhotoFaceDetector {
             return true
         }
         
-        // Check for high edge density (typical of text/logos)
-        let edgeDensity = calculateEdgeDensity(in: croppedImage)
-        print("🔍 [PhotoFaceDetector] Edge density: \(edgeDensity)")
+        // For performance, only check edge density for smaller images or downsample
+        let shouldCheckDetails = width < 500 && height < 500
         
-        if edgeDensity > 0.7 { // High edge density suggests text/geometric patterns
-            print("🔍 [PhotoFaceDetector] High edge density detected - likely text/logo")
-            return true
-        }
-        
-        // Check for uniform textures (like solid walls)
-        let textureVariance = calculateTextureVariance(in: croppedImage)
-        print("🔍 [PhotoFaceDetector] Texture variance: \(textureVariance)")
-        
-        if textureVariance < 0.1 { // Very uniform texture
-            print("🔍 [PhotoFaceDetector] Very uniform texture - likely solid background")
-            return true
+        if shouldCheckDetails {
+            // Check for high edge density (typical of text/logos)
+            let edgeDensity = calculateEdgeDensity(in: croppedImage)
+            print("🔍 [PhotoFaceDetector] Edge density: \(edgeDensity)")
+            
+            if edgeDensity > 0.7 { // High edge density suggests text/geometric patterns
+                print("🔍 [PhotoFaceDetector] High edge density detected - likely text/logo")
+                return true
+            }
+            
+            // Check for uniform textures (like solid walls)
+            let textureVariance = calculateTextureVariance(in: croppedImage)
+            print("🔍 [PhotoFaceDetector] Texture variance: \(textureVariance)")
+            
+            if textureVariance < 0.05 { // Very uniform texture (made more strict)
+                print("🔍 [PhotoFaceDetector] Very uniform texture - likely solid background")
+                return true
+            }
+        } else {
+            print("🔍 [PhotoFaceDetector] Skipping detailed analysis for large image (performance optimization)")
         }
         
         return false
@@ -571,10 +578,19 @@ class PhotoFaceDetector {
         
         // Check for horizontal repetition (like brick patterns)
         var repetitionCount = 0
-        let stepSize = max(1, sampleSize / 4)
+        let stepSize = max(1, Int(sampleSize / 4))
         
-        for y in stride(from: stepSize, to: height - sampleSize, by: stepSize) {
-            for x in stride(from: stepSize, to: width - sampleSize * 2, by: stepSize) {
+        // Add bounds checking to prevent fatal errors
+        let maxY = max(stepSize, height - Int(sampleSize))
+        let maxX = max(stepSize, width - Int(sampleSize) * 2)
+        
+        guard maxY > stepSize && maxX > stepSize else {
+            print("🔍 [PhotoFaceDetector] Image too small for repetition analysis")
+            return false
+        }
+        
+        for y in stride(from: stepSize, to: maxY, by: stepSize) {
+            for x in stride(from: stepSize, to: maxX, by: stepSize) {
                 let sample1 = getPixelSample(pixelData: pixelData, x: x, y: y, size: Int(sampleSize), width: width)
                 let sample2 = getPixelSample(pixelData: pixelData, x: x + Int(sampleSize), y: y, size: Int(sampleSize), width: width)
                 
@@ -584,11 +600,11 @@ class PhotoFaceDetector {
             }
         }
         
-        let totalSamples = ((height - Int(sampleSize)) / stepSize) * ((width - Int(sampleSize) * 2) / stepSize)
-        let repetitionRatio = Double(repetitionCount) / Double(max(1, totalSamples))
+        let totalSamples = max(1, ((maxY - stepSize) / stepSize) * ((maxX - stepSize) / stepSize))
+        let repetitionRatio = Double(repetitionCount) / Double(totalSamples)
         
-        print("🔍 [PhotoFaceDetector] Repetition ratio: \(repetitionRatio)")
-        return repetitionRatio > 0.3 // 30% repetition suggests pattern
+        print("🔍 [PhotoFaceDetector] Repetition ratio: \(repetitionRatio) (\(repetitionCount)/\(totalSamples))")
+        return repetitionRatio > 0.6 // Increased threshold - 60% repetition suggests strong pattern (less aggressive)
     }
     
     // Calculate edge density to detect text/logos
@@ -693,8 +709,15 @@ class PhotoFaceDetector {
     
     private func getPixelSample(pixelData: Data, x: Int, y: Int, size: Int, width: Int) -> [Double] {
         var sample: [Double] = []
+        let height = pixelData.count / (width * 4) // Calculate height from data size
         let endX = min(x + size, width)
-        let endY = min(y + size, width) // Note: using width as max for square sample
+        let endY = min(y + size, height) // Fixed: using height instead of width
+        
+        // Add bounds checking
+        guard x >= 0 && y >= 0 && x < width && y < height && endX > x && endY > y else {
+            print("🔍 [PhotoFaceDetector] Invalid sample bounds: x=\(x), y=\(y), size=\(size), width=\(width), height=\(height)")
+            return [0.0] // Return default value to prevent crashes
+        }
         
         for sampleY in y..<endY {
             for sampleX in x..<endX {
