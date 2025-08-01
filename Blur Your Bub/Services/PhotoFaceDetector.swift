@@ -439,7 +439,7 @@ class PhotoFaceDetector {
         
         // 3. Check maximum size requirements (avoid detecting entire bodies)
         print("🔍 [PhotoFaceDetector] Test 3: Maximum size check")
-        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.4 // Reduced from 0.5
+        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.6 // Increased to 60% for more permissive detection
         print("🔍 [PhotoFaceDetector] Box size: \(box.size), Max allowed: \(maxFaceSize)")
         
         guard box.width <= maxFaceSize && box.height <= maxFaceSize else {
@@ -456,9 +456,9 @@ class PhotoFaceDetector {
         print("🔍 [PhotoFaceDetector] Face area: \(box.width * box.height) pixels")
         print("🔍 [PhotoFaceDetector] Face center: (\(box.midX), \(box.midY))")
         
-        guard aspectRatio >= 0.6 && aspectRatio <= 1.8 else { // Tighter range
+        guard aspectRatio >= 0.4 && aspectRatio <= 2.5 else { // Much more permissive for real faces
             print("🔍 [PhotoFaceDetector] ❌ FAILED: Invalid aspect ratio")
-            print("🔍 [PhotoFaceDetector]   Expected: 0.6-1.8, Got: \(aspectRatio)")
+            print("🔍 [PhotoFaceDetector]   Expected: 0.4-2.5, Got: \(aspectRatio)")
             print("🔍 [PhotoFaceDetector]   This face is too rectangular (width/height ratio)")
             return false
         }
