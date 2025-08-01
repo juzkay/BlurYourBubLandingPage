@@ -802,7 +802,7 @@ class PhotoFaceDetector {
         }
         
         let skinToneRatio = Double(skinTonePixels) / Double(pixelCount)
-        let minSkinToneRatio: Double = 0.15 // Lower threshold for basic detection
+        let minSkinToneRatio: Double = 0.05 // Much lower threshold for babies
         
         print("🔍 [PhotoFaceDetector] Skin tone pixels: \(skinTonePixels)/\(pixelCount) = \(skinToneRatio * 100)%")
         print("🔍 [PhotoFaceDetector] Minimum required: \(minSkinToneRatio * 100)%")
