@@ -327,12 +327,12 @@ class FaceSelectionOverlayView: UIView {
         
         print("🔍 [CoordinateTransform] ImageView rect: \(imageViewRect)")
         
-        // Convert to screen coordinates (accounting for zoom and scroll)
+        // Convert to screen coordinates (accounting for scroll only - zoom already applied)
         let screenRect = CGRect(
-            x: imageViewRect.origin.x * zoomScale - scrollView.contentOffset.x,
-            y: imageViewRect.origin.y * zoomScale - scrollView.contentOffset.y,
-            width: imageViewRect.size.width * zoomScale,
-            height: imageViewRect.size.height * zoomScale
+            x: imageViewRect.origin.x - scrollView.contentOffset.x,
+            y: imageViewRect.origin.y - scrollView.contentOffset.y,
+            width: imageViewRect.size.width,
+            height: imageViewRect.size.height
         )
         
         print("🔍 [CoordinateTransform] Screen rect: \(screenRect)")
