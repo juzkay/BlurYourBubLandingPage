@@ -36,10 +36,13 @@ class PhotoFaceDetector {
                 print("[PhotoFaceDetector] Face \(index): confidence=\(faceObservation.confidence), bounds=\(boundingBox)")
                 
                 // Only include faces with reasonable confidence
-                if faceObservation.confidence > 0.5 {
+                if faceObservation.confidence > 0.3 { // Lowered threshold for better detection
                     let faceImage = self.cropFaceFromImage(image: image, boundingBox: boundingBox)
                     let detectedFace = PhotoDetectedFace(boundingBox: boundingBox, faceImage: faceImage)
                     detectedFaces.append(detectedFace)
+                    print("[PhotoFaceDetector] Added face with confidence \(faceObservation.confidence): \(boundingBox)")
+                } else {
+                    print("[PhotoFaceDetector] Rejected face with low confidence \(faceObservation.confidence): \(boundingBox)")
                 }
             }
         }
@@ -95,10 +98,13 @@ class PhotoFaceDetector {
                 print("[PhotoFaceDetector] Enhanced face \(index): confidence=\(faceObservation.confidence), bounds=\(boundingBox)")
                 
                 // Lower confidence threshold since landmarks provide additional validation
-                if faceObservation.confidence > 0.3 {
+                if faceObservation.confidence > 0.2 { // Even lower for landmarks
                     let faceImage = self.cropFaceFromImage(image: image, boundingBox: boundingBox)
                     let detectedFace = PhotoDetectedFace(boundingBox: boundingBox, faceImage: faceImage)
                     detectedFaces.append(detectedFace)
+                    print("[PhotoFaceDetector] Added landmarks face with confidence \(faceObservation.confidence): \(boundingBox)")
+                } else {
+                    print("[PhotoFaceDetector] Rejected landmarks face with low confidence \(faceObservation.confidence): \(boundingBox)")
                 }
             }
         }
@@ -212,7 +218,11 @@ class PhotoFaceDetector {
         let uniqueFaces = mergeOverlappingFaces(allDetectedFaces)
         print("[PhotoFaceDetector] Multi-strategy total unique faces: \(uniqueFaces.count)")
         
-        return uniqueFaces
+        // Apply strict validation to filter out false positives
+        let validatedFaces = validateAndFilterFaces(uniqueFaces, in: image)
+        print("[PhotoFaceDetector] After validation: \(validatedFaces.count) faces")
+        
+        return validatedFaces
     }
     
     // Try detection with different image orientations
@@ -352,6 +362,189 @@ class PhotoFaceDetector {
             width: box.width * scaleX,
             height: box.height * scaleY
         )
+    }
+    
+    // MARK: - Face Validation and Filtering
+    
+    // Validate and filter detected faces to remove false positives
+    private func validateAndFilterFaces(_ faces: [PhotoDetectedFace], in image: UIImage) -> [PhotoDetectedFace] {
+        var validatedFaces: [PhotoDetectedFace] = []
+        
+        for face in faces {
+            if isValidFace(face, in: image) {
+                validatedFaces.append(face)
+            } else {
+                print("[PhotoFaceDetector] Filtered out invalid face: \(face.boundingBox)")
+            }
+        }
+        
+        return validatedFaces
+    }
+    
+    // Check if a detected face is valid (not a false positive)
+    private func isValidFace(_ face: PhotoDetectedFace, in image: UIImage) -> Bool {
+        let box = face.boundingBox
+        let imageSize = image.size
+        
+        // 1. Check if bounding box is within image bounds
+        guard box.minX >= 0 && box.minY >= 0 && 
+              box.maxX <= imageSize.width && box.maxY <= imageSize.height else {
+            print("[PhotoFaceDetector] Face outside image bounds: \(box)")
+            return false
+        }
+        
+        // 2. Check minimum size requirements
+        let minFaceSize: CGFloat = 50.0 // Minimum face width/height
+        guard box.width >= minFaceSize && box.height >= minFaceSize else {
+            print("[PhotoFaceDetector] Face too small: \(box.size)")
+            return false
+        }
+        
+        // 3. Check aspect ratio (faces should be roughly square-ish)
+        let aspectRatio = box.width / box.height
+        guard aspectRatio >= 0.5 && aspectRatio <= 2.0 else {
+            print("[PhotoFaceDetector] Invalid aspect ratio: \(aspectRatio)")
+            return false
+        }
+        
+        // 4. Check if the area has sufficient detail (not just flat color)
+        guard hasSufficientDetail(in: box, of: image) else {
+            print("[PhotoFaceDetector] Insufficient detail in face area")
+            return false
+        }
+        
+        // 5. Check if the area looks like a face (basic skin tone detection)
+        guard hasFaceLikeCharacteristics(in: box, of: image) else {
+            print("[PhotoFaceDetector] Area doesn't have face-like characteristics")
+            return false
+        }
+        
+        return true
+    }
+    
+    // Check if an area has sufficient detail (not just flat color/text)
+    private func hasSufficientDetail(in box: CGRect, of image: UIImage) -> Bool {
+        guard let cgImage = image.cgImage else { return false }
+        
+        // Crop the face area
+        let cropRect = CGRect(
+            x: box.minX * image.scale,
+            y: box.minY * image.scale,
+            width: box.width * image.scale,
+            height: box.height * image.scale
+        )
+        
+        guard let croppedCGImage = cgImage.cropping(to: cropRect) else { return false }
+        
+        // Convert to grayscale for edge detection
+        let width = Int(croppedCGImage.width)
+        let height = Int(croppedCGImage.height)
+        let bytesPerRow = width
+        
+        guard let context = CGContext(data: nil,
+                                    width: width,
+                                    height: height,
+                                    bitsPerComponent: 8,
+                                    bytesPerRow: bytesPerRow,
+                                    space: CGColorSpaceCreateDeviceGray(),
+                                    bitmapInfo: CGImageAlphaInfo.none.rawValue) else {
+            return false
+        }
+        
+        context.draw(croppedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        guard let data = context.data else { return false }
+        let buffer = data.bindMemory(to: UInt8.self, capacity: width * height)
+        
+        // Calculate variance (measure of detail)
+        var sum: Double = 0
+        var sumSquared: Double = 0
+        let pixelCount = width * height
+        
+        for i in 0..<pixelCount {
+            let pixel = Double(buffer[i])
+            sum += pixel
+            sumSquared += pixel * pixel
+        }
+        
+        let mean = sum / Double(pixelCount)
+        let variance = (sumSquared / Double(pixelCount)) - (mean * mean)
+        
+        // High variance indicates more detail
+        let minVariance: Double = 100.0 // Threshold for sufficient detail
+        return variance > minVariance
+    }
+    
+    // Check if an area has face-like characteristics (basic skin tone detection)
+    private func hasFaceLikeCharacteristics(in box: CGRect, of image: UIImage) -> Bool {
+        guard let cgImage = image.cgImage else { return false }
+        
+        // Crop the face area
+        let cropRect = CGRect(
+            x: box.minX * image.scale,
+            y: box.minY * image.scale,
+            width: box.width * image.scale,
+            height: box.height * image.scale
+        )
+        
+        guard let croppedCGImage = cgImage.cropping(to: cropRect) else { return false }
+        
+        // Convert to RGB for color analysis
+        let width = Int(croppedCGImage.width)
+        let height = Int(croppedCGImage.height)
+        let bytesPerRow = width * 4
+        
+        guard let context = CGContext(data: nil,
+                                    width: width,
+                                    height: height,
+                                    bitsPerComponent: 8,
+                                    bytesPerRow: bytesPerRow,
+                                    space: CGColorSpaceCreateDeviceRGB(),
+                                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            return false
+        }
+        
+        context.draw(croppedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        guard let data = context.data else { return false }
+        let buffer = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
+        
+        var skinTonePixels = 0
+        let pixelCount = width * height
+        
+        for i in stride(from: 0, to: pixelCount * 4, by: 4) {
+            let r = Double(buffer[i])
+            let g = Double(buffer[i + 1])
+            let b = Double(buffer[i + 2])
+            
+            // Basic skin tone detection (simplified)
+            if isSkinTone(r: r, g: g, b: b) {
+                skinTonePixels += 1
+            }
+        }
+        
+        let skinToneRatio = Double(skinTonePixels) / Double(pixelCount)
+        let minSkinToneRatio: Double = 0.1 // At least 10% should be skin-like
+        
+        return skinToneRatio > minSkinToneRatio
+    }
+    
+    // Basic skin tone detection
+    private func isSkinTone(r: Double, g: Double, b: Double) -> Bool {
+        // Simplified skin tone detection
+        // R should be dominant, G should be moderate, B should be lower
+        let total = r + g + b
+        guard total > 0 else { return false }
+        
+        let rRatio = r / total
+        let gRatio = g / total
+        let bRatio = b / total
+        
+        // Skin tones typically have:
+        // - R ratio > 0.3 (reddish)
+        // - G ratio between 0.2-0.4 (moderate green)
+        // - B ratio < 0.3 (low blue)
+        return rRatio > 0.3 && gRatio >= 0.2 && gRatio <= 0.4 && bRatio < 0.3
     }
     
     // Convert Vision's normalized coordinates to image pixel coordinates
