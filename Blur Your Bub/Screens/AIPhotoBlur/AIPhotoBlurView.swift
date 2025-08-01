@@ -1,6 +1,128 @@
 import SwiftUI
 import PhotosUI
 
+// MARK: - Face Gallery Components
+struct FaceGalleryView: View {
+    @Binding var detectedFaces: [PhotoDetectedFace]
+    let onSelectionChanged: () -> Void
+    
+    private let faceSize: CGFloat = 80
+    private let spacing: CGFloat = 12
+    
+    var selectedCount: Int {
+        detectedFaces.filter { $0.isSelected }.count
+    }
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Header with selection count
+            HStack {
+                Text("Select faces to blur")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Text("Selected: \(selectedCount)/\(detectedFaces.count)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal)
+            
+            // Face gallery
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: spacing) {
+                    ForEach(Array(detectedFaces.enumerated()), id: \.element.id) { index, face in
+                        FaceThumbnailView(
+                            face: face,
+                            index: index + 1,
+                            size: faceSize
+                        ) {
+                            toggleFaceSelection(face.id)
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+            .frame(height: faceSize + 32) // Extra space for selection indicator
+        }
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(12)
+        .shadow(radius: 2)
+    }
+    
+    private func toggleFaceSelection(_ faceId: UUID) {
+        if let index = detectedFaces.firstIndex(where: { $0.id == faceId }) {
+            detectedFaces[index].isSelected.toggle()
+            onSelectionChanged()
+        }
+    }
+}
+
+struct FaceThumbnailView: View {
+    let face: PhotoDetectedFace
+    let index: Int
+    let size: CGFloat
+    let onTap: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            ZStack {
+                // Face image
+                if let faceImage = face.faceImage {
+                    Image(uiImage: faceImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: size, height: size)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(face.isSelected ? Color.green : Color.gray.opacity(0.3), lineWidth: 3)
+                        )
+                } else {
+                    // Fallback if no face image
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: size, height: size)
+                        .overlay(
+                            Image(systemName: "person.crop.circle")
+                                .font(.title)
+                                .foregroundColor(.gray)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(face.isSelected ? Color.green : Color.gray.opacity(0.3), lineWidth: 3)
+                        )
+                }
+                
+                // Selection indicator
+                if face.isSelected {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.green)
+                                .background(Color.white)
+                                .clipShape(Circle())
+                        }
+                        Spacer()
+                    }
+                    .padding(4)
+                }
+            }
+            
+            // Face number label
+            Text("Face \(index)")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .onTapGesture {
+            onTap()
+        }
+    }
+}
+
 struct AIPhotoBlurView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedImage: UIImage?
@@ -53,34 +175,36 @@ struct AIPhotoBlurView: View {
                     .padding(.horizontal)
                     
                     if let image = processedImage ?? selectedImage {
-                        // Photo with face overlay
-                        ZStack {
-                                                    AIPhotoEditView(
-                            image: image,
-                            detectedFaces: $detectedFaces,
-                            isPreviewMode: $isPreviewMode,
-                            onFaceToggled: { faceId in
-                                toggleFaceSelection(faceId: faceId)
-                            }
-                        )
-                        }
-                        .cornerRadius(12)
-                        .padding(.horizontal)
+                        // Photo display (no overlay needed)
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .cornerRadius(12)
+                            .padding(.horizontal)
                         
-                        // Instructions or status
+                        // Face Gallery for selection
                         if !detectedFaces.isEmpty && !isPreviewMode {
+                            FaceGalleryView(
+                                detectedFaces: $detectedFaces,
+                                onSelectionChanged: {
+                                    // Apply real-time preview when selection changes
+                                    if hasSelectedFaces {
+                                        applyRealtimePreview()
+                                    } else {
+                                        processedImage = nil
+                                    }
+                                }
+                            )
+                            .padding(.horizontal)
+                        } else if !detectedFaces.isEmpty && isPreviewMode {
                             VStack(spacing: 4) {
-                                Text("Tap the detected face to blur, tap again to undo")
+                                Text("Preview Mode")
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(Theme.primaryText)
-                                    .multilineTextAlignment(.center)
                                 
-                                if hasSelectedFaces {
-                                    Text("Green = will blur • Gray = won't blur")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(Theme.secondaryText)
-                                        .multilineTextAlignment(.center)
-                                }
+                                Text("Face selection hidden during preview")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(Theme.secondaryText)
                             }
                             .padding(.horizontal)
                         } else if isProcessingFaces {
@@ -314,19 +438,7 @@ struct AIPhotoBlurView: View {
         }
     }
     
-    private func toggleFaceSelection(faceId: UUID) {
-        if let index = detectedFaces.firstIndex(where: { $0.id == faceId }) {
-            detectedFaces[index].isSelected.toggle()
-            
-            // Apply real-time preview if any faces are selected
-            if hasSelectedFaces {
-                applyRealtimePreview()
-            } else {
-                // Reset to original image if no faces selected
-                processedImage = nil
-            }
-        }
-    }
+
     
     private func applyRealtimePreview() {
         guard let originalImage = selectedImage else { return }
