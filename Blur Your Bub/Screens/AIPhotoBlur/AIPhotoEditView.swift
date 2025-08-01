@@ -302,10 +302,14 @@ class FaceSelectionOverlayView: UIView {
         
         // The image view shows the image with aspect fit content mode
         // Calculate how the image fits within the image view
-        let imageViewSize = imageView.bounds.size
+        let imageViewSize = imageView.frame.size
         let scaleX = imageViewSize.width / imageSize.width
         let scaleY = imageViewSize.height / imageSize.height
         let scale = min(scaleX, scaleY)
+        
+        print("🔍 [CoordinateTransform] ScaleX: \(scaleX) (imageView: \(imageViewSize.width) / image: \(imageSize.width))")
+        print("🔍 [CoordinateTransform] ScaleY: \(scaleY) (imageView: \(imageViewSize.height) / image: \(imageSize.height))")
+        print("🔍 [CoordinateTransform] Final scale (min): \(scale)")
         
         // Calculate actual displayed image size and position within image view
         let displayedWidth = imageSize.width * scale
@@ -316,6 +320,12 @@ class FaceSelectionOverlayView: UIView {
         print("🔍 [CoordinateTransform] Scale: \(scale)")
         print("🔍 [CoordinateTransform] Displayed size: \(displayedWidth) x \(displayedHeight)")
         print("🔍 [CoordinateTransform] Image offset within view: (\(imageOffsetX), \(imageOffsetY))")
+        
+        // DEBUG: Let's trace the actual values to see what's happening
+        print("🔍 [CoordinateTransform] DEBUG - imageViewSize: \(imageViewSize)")
+        print("🔍 [CoordinateTransform] DEBUG - imageSize: \(imageSize)")
+        print("🔍 [CoordinateTransform] DEBUG - Raw scaleX calculation: \(imageViewSize.width) / \(imageSize.width) = \(imageViewSize.width / imageSize.width)")
+        print("🔍 [CoordinateTransform] DEBUG - Raw scaleY calculation: \(imageViewSize.height) / \(imageSize.height) = \(imageViewSize.height / imageSize.height)")
         
         // Convert face coordinates to image view coordinates
         let imageViewX = imageRect.origin.x * scale + imageOffsetX
