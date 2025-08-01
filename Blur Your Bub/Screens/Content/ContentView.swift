@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import CoreImage
 import CoreImage.CIFilterBuiltins
+import Combine
 import os
 
 private let logger = Logger(subsystem: "com.yourapp.blur", category: "blur")
@@ -38,6 +39,8 @@ struct ContentView: View {
     @State private var blurApplied: Bool = false
     // Video blur screen presentation
     @State private var showVideoBlurScreen = false
+    // AI Photo blur screen presentation
+    @State private var showAIPhotoBlurScreen = false
     // Drawing out-of-bounds error
     @State private var showDrawError = false
     // Removed showingVideoBlur and all VideoBlurView references
@@ -234,7 +237,7 @@ struct ContentView: View {
                             .padding(.bottom, 20)
                         }
                     } else {
-                        EmptyStateView(showingImagePicker: $showingImagePicker, showVideoBlurScreen: $showVideoBlurScreen)
+                        EmptyStateView(showingImagePicker: $showingImagePicker, showVideoBlurScreen: $showVideoBlurScreen, showAIPhotoBlurScreen: $showAIPhotoBlurScreen)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                     // Remove BottomControlsView since buttons are now in PhotoEditView
@@ -294,6 +297,9 @@ struct ContentView: View {
         .sheet(isPresented: $showVideoBlurScreen) {
             VideoBlurScreen()
         }
+        .sheet(isPresented: $showAIPhotoBlurScreen) {
+            AIPhotoBlurView()
+        }
         .alert(isPresented: $showDrawError) {
             Alert(title: Text("Drawing Error"),
                   message: Text("Please draw only within the photo preview area."),
@@ -301,6 +307,20 @@ struct ContentView: View {
         }
         .alert(isPresented: $showSaveSuccess) {
             Alert(title: Text("Saved!"), message: Text("Image saved to your device."), dismissButton: .default(Text("OK")))
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchToManualPhotoEdit"))) { notification in
+            if let image = notification.object as? UIImage {
+                // Switch to manual photo editing mode with the selected image
+                selectedImage = image
+                processedImage = nil
+                blurPaths = []
+                currentPath = nil
+                blurApplied = false
+                lastBlurredPaths = []
+                lastBlurredOriginal = nil
+                isDrawingMode = false
+                showAIPhotoBlurScreen = false
+            }
         }
     }
     
@@ -329,6 +349,7 @@ struct ContentView: View {
         showingImagePicker = false
         showingShareSheet = false
         showVideoBlurScreen = false
+        showAIPhotoBlurScreen = false
         showDrawError = false
         isDrawingMode = false
     }
@@ -417,6 +438,7 @@ struct ContentView: View {
 struct EmptyStateView: View {
     @Binding var showingImagePicker: Bool
     @Binding var showVideoBlurScreen: Bool
+    @Binding var showAIPhotoBlurScreen: Bool
     var body: some View {
         VStack(spacing: 12) {
             Image("Transparent Baby")
@@ -451,6 +473,20 @@ struct EmptyStateView: View {
                 HStack {
                     Image(systemName: "video.fill")
                     Text("Choose Video")
+                }
+                .font(Theme.fontSubtitle)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(Theme.accent)
+                .foregroundColor(.white)
+                .cornerRadius(Theme.buttonCornerRadius)
+                .shadow(color: Theme.shadow, radius: 8, x: 0, y: 4)
+            }
+            .padding(.horizontal, 24)
+            Button(action: { showAIPhotoBlurScreen = true }) {
+                HStack {
+                    Image(systemName: "brain.head.profile")
+                    Text("AI Photo Blur")
                 }
                 .font(Theme.fontSubtitle)
                 .frame(maxWidth: .infinity)
@@ -663,6 +699,128 @@ struct BlurProcessor {
             logger.error("=== BLUR PROCESS FAILED - applyMaskToImages returned nil ===")
         }
         return result ?? downscaledImage
+    }
+    
+    // MARK: - Face Rectangle Blur Method
+    static func applyBlurToFaces(to image: UIImage, faceRects: [CGRect], blurRadius: Double = 70.0) -> UIImage {
+        logger.debug("=== FACE BLUR PROCESS START ===")
+        logger.debug("Input image size: \(image.size.width) x \(image.size.height)")
+        logger.debug("Number of face rects: \(faceRects.count)")
+        logger.debug("Blur radius: \(blurRadius)")
+        
+        guard !faceRects.isEmpty else {
+            logger.debug("No face rects to blur - returning original image")
+            return image
+        }
+        
+        let maxDimension: CGFloat = 1024
+        let downscaledImage = image.downscaled(maxDimension: maxDimension)
+        logger.debug("Downscaled image size: \(downscaledImage.size.width) x \(downscaledImage.size.height)")
+        
+        let scaleX = downscaledImage.size.width / image.size.width
+        let scaleY = downscaledImage.size.height / image.size.height
+        logger.debug("Scale factors - X: \(scaleX), Y: \(scaleY)")
+        
+        let scaledFaceRects = scaleFaceRects(faceRects, scaleX: scaleX, scaleY: scaleY)
+        logger.debug("Scaled face rects count: \(scaledFaceRects.count)")
+        
+        guard let cgImage = downscaledImage.cgImage else {
+            logger.error("Failed to get CGImage from downscaled image")
+            return downscaledImage
+        }
+        
+        guard let context = createBitmapContext(for: downscaledImage) else {
+            logger.error("Failed to create context")
+            return downscaledImage
+        }
+        
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: Int(downscaledImage.size.width), height: Int(downscaledImage.size.height)))
+        logger.debug("Original image drawn to context")
+        
+        guard let blurredCGImage = createBlurredImage(from: cgImage, blurRadius: blurRadius, size: downscaledImage.size) else {
+            logger.error("Failed to create blurred CGImage")
+            return downscaledImage
+        }
+        logger.debug("Blurred image created successfully")
+        
+        let maskImage = createFaceMask(from: scaledFaceRects, imageSize: downscaledImage.size)
+        logger.debug("Face mask image created, size: \(maskImage.size.width) x \(maskImage.size.height)")
+
+        let resizedMaskImage = maskImage.resized(to: downscaledImage.size)
+        logger.debug("Resized face mask image, size: \(resizedMaskImage.size.width) x \(resizedMaskImage.size.height)")
+
+        guard let maskCGImage = resizedMaskImage.cgImage else {
+            logger.error("Failed to create mask CGImage")
+            return downscaledImage
+        }
+        logger.debug("Mask CGImage created successfully")
+        
+        let result = applyMaskToImages(original: cgImage, blurred: blurredCGImage, mask: maskCGImage, size: downscaledImage.size)
+        if result != nil {
+            logger.debug("=== FACE BLUR PROCESS SUCCESS ===")
+        } else {
+            logger.error("=== FACE BLUR PROCESS FAILED - applyMaskToImages returned nil ===")
+        }
+        return result ?? downscaledImage
+    }
+    
+    private static func scaleFaceRects(_ rects: [CGRect], scaleX: CGFloat, scaleY: CGFloat) -> [CGRect] {
+        return rects.map { rect in
+            CGRect(
+                x: rect.origin.x * scaleX,
+                y: rect.origin.y * scaleY,
+                width: rect.size.width * scaleX,
+                height: rect.size.height * scaleY
+            )
+        }
+    }
+    
+    private static func createFaceMask(from faceRects: [CGRect], imageSize: CGSize) -> UIImage {
+        logger.debug("=== FACE MASK CREATION START ===")
+        logger.debug("Creating mask for \(faceRects.count) face rectangles")
+        logger.debug("Mask image size: \(imageSize.width) x \(imageSize.height)")
+        
+        let renderer = UIGraphicsImageRenderer(size: imageSize)
+        
+        // Create mask using explicit syntax to avoid compiler ambiguity
+        let maskImage: UIImage
+        UIGraphicsBeginImageContextWithOptions(imageSize, false, 1.0)
+        
+        if let cgContext = UIGraphicsGetCurrentContext() {
+            // Fill background with black (no blur)
+            cgContext.setFillColor(UIColor.black.cgColor)
+            cgContext.fill(CGRect(origin: .zero, size: imageSize))
+            logger.debug("Mask background filled with black")
+            
+            // Fill face rectangles with white (blur these areas)
+            cgContext.setFillColor(UIColor.white.cgColor)
+            
+            for (index, faceRect) in faceRects.enumerated() {
+                logger.debug("Drawing face rect \(index): \(String(describing: faceRect))")
+                
+                // Expand the face rectangle slightly for better coverage
+                let expandedRect = faceRect.insetBy(dx: -10, dy: -10)
+                
+                // Clamp to image bounds
+                let clampedRect = expandedRect.intersection(CGRect(origin: .zero, size: imageSize))
+                
+                if !clampedRect.isNull && !clampedRect.isEmpty {
+                    cgContext.fillEllipse(in: clampedRect) // Use ellipse for more natural face blur
+                    logger.debug("Face rect \(index) filled with white ellipse")
+                } else {
+                    logger.debug("Face rect \(index) is outside image bounds, skipping")
+                }
+            }
+            
+            maskImage = UIGraphicsGetImageFromCurrentImageContext() ?? UIImage()
+        } else {
+            maskImage = UIImage()
+        }
+        
+        UIGraphicsEndImageContext()
+        
+        logger.debug("=== FACE MASK CREATION COMPLETE ===")
+        return maskImage
     }
 
     private static func scalePaths(_ paths: [BlurPath], scaleX: CGFloat, scaleY: CGFloat) -> [BlurPath] {
