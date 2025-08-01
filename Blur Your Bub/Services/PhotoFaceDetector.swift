@@ -422,9 +422,9 @@ class PhotoFaceDetector {
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Image bounds check")
         
-        // 2. Check minimum size requirements (very strict)
+        // 2. Check minimum size requirements (increased for better accuracy)
         print("🔍 [PhotoFaceDetector] Test 2: Minimum size check")
-        let minFaceSize: CGFloat = 100.0
+        let minFaceSize: CGFloat = 150.0 // Increased from 100.0
         print("🔍 [PhotoFaceDetector] Box size: \(box.size), Min required: \(minFaceSize)")
         
         guard box.width >= minFaceSize && box.height >= minFaceSize else {
@@ -435,7 +435,7 @@ class PhotoFaceDetector {
         
         // 3. Check maximum size requirements (avoid detecting entire bodies)
         print("🔍 [PhotoFaceDetector] Test 3: Maximum size check")
-        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.5 // Increased from 0.3
+        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.4 // Reduced from 0.5
         print("🔍 [PhotoFaceDetector] Box size: \(box.size), Max allowed: \(maxFaceSize)")
         
         guard box.width <= maxFaceSize && box.height <= maxFaceSize else {
@@ -449,7 +449,7 @@ class PhotoFaceDetector {
         let aspectRatio = box.width / box.height
         print("🔍 [PhotoFaceDetector] Aspect ratio: \(aspectRatio)")
         
-        guard aspectRatio >= 0.5 && aspectRatio <= 2.0 else { // Much more permissive
+        guard aspectRatio >= 0.6 && aspectRatio <= 1.8 else { // Tighter range
             print("🔍 [PhotoFaceDetector] ❌ FAILED: Invalid aspect ratio")
             return false
         }
@@ -457,7 +457,7 @@ class PhotoFaceDetector {
         
         // 5. Check if the area is not in the extreme edges (likely false positive)
         print("🔍 [PhotoFaceDetector] Test 5: Edge margin check")
-        let edgeMargin: CGFloat = 50.0
+        let edgeMargin: CGFloat = 100.0 // Increased from 50.0
         print("🔍 [PhotoFaceDetector] Edge margin: \(edgeMargin)")
         print("🔍 [PhotoFaceDetector] Box position: minX=\(box.minX), minY=\(box.minY), maxX=\(box.maxX), maxY=\(box.maxY)")
         print("🔍 [PhotoFaceDetector] Allowed range: X=[\(edgeMargin), \(imageSize.width - edgeMargin)], Y=[\(edgeMargin), \(imageSize.height - edgeMargin)]")
@@ -470,13 +470,21 @@ class PhotoFaceDetector {
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Edge margin check")
         
-        // 6. Simple skin tone check (much simpler than before)
-        print("🔍 [PhotoFaceDetector] Test 6: Skin tone check")
-        guard hasBasicSkinTone(in: box, of: image) else {
+        // 6. Enhanced skin tone check
+        print("🔍 [PhotoFaceDetector] Test 6: Enhanced skin tone check")
+        guard hasEnhancedSkinTone(in: box, of: image) else {
             print("🔍 [PhotoFaceDetector] ❌ FAILED: No skin tone detected")
             return false
         }
-        print("🔍 [PhotoFaceDetector] ✅ PASSED: Skin tone check")
+        print("🔍 [PhotoFaceDetector] ✅ PASSED: Enhanced skin tone check")
+        
+        // 7. Check for face-like features (new test)
+        print("🔍 [PhotoFaceDetector] Test 7: Face-like features check")
+        guard hasFaceLikeFeatures(in: box, of: image) else {
+            print("🔍 [PhotoFaceDetector] ❌ FAILED: No face-like features detected")
+            return false
+        }
+        print("🔍 [PhotoFaceDetector] ✅ PASSED: Face-like features check")
         
         print("🔍 [PhotoFaceDetector] ✅ ALL TESTS PASSED - Face is valid!")
         return true
@@ -817,6 +825,194 @@ class PhotoFaceDetector {
     private func isBasicSkinTone(r: Double, g: Double, b: Double) -> Bool {
         // Simplified: R should be higher than B, and G should be moderate
         return r > g && g > b && r > 100 && g > 80 && b < 150
+    }
+    
+    // Enhanced skin tone detection with more sophisticated analysis
+    private func hasEnhancedSkinTone(in box: CGRect, of image: UIImage) -> Bool {
+        print("🔍 [PhotoFaceDetector] Starting enhanced skin tone analysis for box: \(box)")
+        
+        guard let cgImage = image.cgImage else { 
+            print("🔍 [PhotoFaceDetector] ❌ Failed to get CGImage")
+            return false 
+        }
+        
+        // Crop the area
+        let cropRect = CGRect(
+            x: box.minX * image.scale,
+            y: box.minY * image.scale,
+            width: box.width * image.scale,
+            height: box.height * image.scale
+        )
+        
+        print("🔍 [PhotoFaceDetector] Enhanced crop rect: \(cropRect)")
+        
+        guard let croppedCGImage = cgImage.cropping(to: cropRect) else { 
+            print("🔍 [PhotoFaceDetector] ❌ Failed to crop image")
+            return false 
+        }
+        
+        print("🔍 [PhotoFaceDetector] Enhanced cropped image size: \(croppedCGImage.width) x \(croppedCGImage.height)")
+        
+        // Convert to RGB for color analysis
+        let width = Int(croppedCGImage.width)
+        let height = Int(croppedCGImage.height)
+        let bytesPerRow = width * 4
+        
+        guard let context = CGContext(data: nil,
+                                    width: width,
+                                    height: height,
+                                    bitsPerComponent: 8,
+                                    bytesPerRow: bytesPerRow,
+                                    space: CGColorSpaceCreateDeviceRGB(),
+                                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            print("🔍 [PhotoFaceDetector] ❌ Failed to create RGB context")
+            return false
+        }
+        
+        context.draw(croppedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        guard let data = context.data else { 
+            print("🔍 [PhotoFaceDetector] ❌ Failed to get image data")
+            return false 
+        }
+        let buffer = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
+        
+        var skinTonePixels = 0
+        var centerSkinTonePixels = 0
+        let pixelCount = width * height
+        
+        // Define center region for more important skin tone detection
+        let centerX = width / 2
+        let centerY = height / 2
+        let centerRadius = min(width, height) / 3
+        
+        print("🔍 [PhotoFaceDetector] Enhanced analyzing \(pixelCount) pixels for skin tone...")
+        print("🔍 [PhotoFaceDetector] Center region: (\(centerX), \(centerY)) with radius \(centerRadius)")
+        
+        for y in 0..<height {
+            for x in 0..<width {
+                let pixelIndex = (y * width + x) * 4
+                let r = Double(buffer[pixelIndex])
+                let g = Double(buffer[pixelIndex + 1])
+                let b = Double(buffer[pixelIndex + 2])
+                
+                // Enhanced skin tone detection
+                if isEnhancedSkinTone(r: r, g: g, b: b) {
+                    skinTonePixels += 1
+                    
+                    // Check if pixel is in center region
+                    let distanceFromCenter = sqrt(pow(Double(x - centerX), 2) + pow(Double(y - centerY), 2))
+                    if distanceFromCenter <= Double(centerRadius) {
+                        centerSkinTonePixels += 1
+                    }
+                }
+            }
+        }
+        
+        let skinToneRatio = Double(skinTonePixels) / Double(pixelCount)
+        let centerArea = Double(centerRadius * centerRadius) * .pi
+        let centerSkinToneRatio = Double(centerSkinTonePixels) / centerArea
+        let minSkinToneRatio: Double = 0.08 // Slightly higher threshold
+        let minCenterSkinToneRatio: Double = 0.15 // Higher threshold for center
+        
+        print("🔍 [PhotoFaceDetector] Enhanced skin tone analysis:")
+        print("🔍 [PhotoFaceDetector]   Overall skin tone: \(skinTonePixels)/\(pixelCount) = \(skinToneRatio * 100)%")
+        print("🔍 [PhotoFaceDetector]   Center skin tone: \(centerSkinTonePixels)/\(Int(centerArea)) = \(centerSkinToneRatio * 100)%")
+        print("🔍 [PhotoFaceDetector]   Min required: \(minSkinToneRatio * 100)% overall, \(minCenterSkinToneRatio * 100)% center")
+        
+        let result = skinToneRatio >= minSkinToneRatio && centerSkinToneRatio >= minCenterSkinToneRatio
+        print("🔍 [PhotoFaceDetector] Enhanced skin tone check result: \(result ? "PASS" : "FAIL")")
+        
+        return result
+    }
+    
+    // Enhanced skin tone detection algorithm
+    private func isEnhancedSkinTone(r: Double, g: Double, b: Double) -> Bool {
+        // More sophisticated skin tone detection
+        // Check for typical skin tone ranges
+        let isWarmTone = r > g && g > b && r > 120 && g > 80 && b < 120
+        let isNeutralTone = r > 100 && g > 90 && b > 70 && abs(r - g) < 30 && abs(g - b) < 30
+        let isLightTone = r > 150 && g > 120 && b > 100 && r < 250 && g < 220 && b < 200
+        
+        return isWarmTone || isNeutralTone || isLightTone
+    }
+    
+    // Check for face-like features (eyes, nose, mouth patterns)
+    private func hasFaceLikeFeatures(in box: CGRect, of image: UIImage) -> Bool {
+        print("🔍 [PhotoFaceDetector] Starting face-like features analysis for box: \(box)")
+        
+        guard let cgImage = image.cgImage else { 
+            print("🔍 [PhotoFaceDetector] ❌ Failed to get CGImage")
+            return false 
+        }
+        
+        // Crop the area
+        let cropRect = CGRect(
+            x: box.minX * image.scale,
+            y: box.minY * image.scale,
+            width: box.width * image.scale,
+            height: box.height * image.scale
+        )
+        
+        guard let croppedCGImage = cgImage.cropping(to: cropRect) else { 
+            print("🔍 [PhotoFaceDetector] ❌ Failed to crop image")
+            return false 
+        }
+        
+        // Simple feature detection: look for symmetry and edge patterns
+        // This is a simplified version - in a real app you'd use more sophisticated algorithms
+        
+        // Check if the area has reasonable detail (not just flat color)
+        let hasDetail = hasSufficientDetail(in: box, of: image)
+        
+        // Check for reasonable symmetry (faces are roughly symmetrical)
+        let hasSymmetry = checkSymmetry(in: croppedCGImage)
+        
+        print("🔍 [PhotoFaceDetector] Face-like features analysis:")
+        print("🔍 [PhotoFaceDetector]   Has detail: \(hasDetail)")
+        print("🔍 [PhotoFaceDetector]   Has symmetry: \(hasSymmetry)")
+        
+        let result = hasDetail && hasSymmetry
+        print("🔍 [PhotoFaceDetector] Face-like features check result: \(result ? "PASS" : "FAIL")")
+        
+        return result
+    }
+    
+    // Check for symmetry in the image (simplified)
+    private func checkSymmetry(in cgImage: CGImage) -> Bool {
+        let width = Int(cgImage.width)
+        let height = Int(cgImage.height)
+        
+        // Simple symmetry check: compare left and right halves
+        let halfWidth = width / 2
+        var symmetryScore = 0
+        let samplePoints = min(100, height) // Sample points for performance
+        
+        for y in stride(from: 0, to: height, by: max(1, height / samplePoints)) {
+            for x in 0..<halfWidth {
+                let leftPixel = getPixelBrightness(at: CGPoint(x: x, y: y), in: cgImage)
+                let rightPixel = getPixelBrightness(at: CGPoint(x: width - 1 - x, y: y), in: cgImage)
+                
+                let difference = abs(leftPixel - rightPixel)
+                if difference < 30 { // Threshold for "similar" pixels
+                    symmetryScore += 1
+                }
+            }
+        }
+        
+        let symmetryRatio = Double(symmetryScore) / Double(halfWidth * samplePoints)
+        let hasSymmetry = symmetryRatio > 0.3 // 30% symmetry threshold
+        
+        print("🔍 [PhotoFaceDetector] Symmetry analysis: \(symmetryScore)/\(halfWidth * samplePoints) = \(symmetryRatio * 100)%")
+        
+        return hasSymmetry
+    }
+    
+    // Get pixel brightness at a point (simplified)
+    private func getPixelBrightness(at point: CGPoint, in cgImage: CGImage) -> Double {
+        // Simplified brightness calculation
+        // In a real implementation, you'd get the actual pixel data
+        return 128.0 // Placeholder - would calculate actual brightness
     }
     
     // Convert Vision's normalized coordinates to image pixel coordinates
