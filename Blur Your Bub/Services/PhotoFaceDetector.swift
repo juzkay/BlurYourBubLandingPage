@@ -386,39 +386,61 @@ class PhotoFaceDetector {
         let box = face.boundingBox
         let imageSize = image.size
         
+        print("[PhotoFaceDetector] Validating face: \(box)")
+        
         // 1. Check if bounding box is within image bounds
         guard box.minX >= 0 && box.minY >= 0 && 
               box.maxX <= imageSize.width && box.maxY <= imageSize.height else {
-            print("[PhotoFaceDetector] Face outside image bounds: \(box)")
+            print("[PhotoFaceDetector] ❌ Face outside image bounds: \(box)")
             return false
         }
         
-        // 2. Check minimum size requirements
-        let minFaceSize: CGFloat = 50.0 // Minimum face width/height
+        // 2. Check minimum size requirements (more strict)
+        let minFaceSize: CGFloat = 80.0 // Increased minimum size
         guard box.width >= minFaceSize && box.height >= minFaceSize else {
-            print("[PhotoFaceDetector] Face too small: \(box.size)")
+            print("[PhotoFaceDetector] ❌ Face too small: \(box.size)")
             return false
         }
         
-        // 3. Check aspect ratio (faces should be roughly square-ish)
+        // 3. Check maximum size requirements (avoid detecting entire bodies)
+        let maxFaceSize: CGFloat = min(imageSize.width, imageSize.height) * 0.4
+        guard box.width <= maxFaceSize && box.height <= maxFaceSize else {
+            print("[PhotoFaceDetector] ❌ Face too large (likely body): \(box.size)")
+            return false
+        }
+        
+        // 4. Check aspect ratio (faces should be roughly square-ish)
         let aspectRatio = box.width / box.height
-        guard aspectRatio >= 0.5 && aspectRatio <= 2.0 else {
-            print("[PhotoFaceDetector] Invalid aspect ratio: \(aspectRatio)")
+        guard aspectRatio >= 0.6 && aspectRatio <= 1.8 else {
+            print("[PhotoFaceDetector] ❌ Invalid aspect ratio: \(aspectRatio)")
             return false
         }
         
-        // 4. Check if the area has sufficient detail (not just flat color)
+        // 5. Check if the area has sufficient detail (not just flat color/text)
         guard hasSufficientDetail(in: box, of: image) else {
-            print("[PhotoFaceDetector] Insufficient detail in face area")
+            print("[PhotoFaceDetector] ❌ Insufficient detail in face area")
             return false
         }
         
-        // 5. Check if the area looks like a face (basic skin tone detection)
+        // 6. Check if the area looks like a face (enhanced skin tone detection)
         guard hasFaceLikeCharacteristics(in: box, of: image) else {
-            print("[PhotoFaceDetector] Area doesn't have face-like characteristics")
+            print("[PhotoFaceDetector] ❌ Area doesn't have face-like characteristics")
             return false
         }
         
+        // 7. Check if the area is not text/logo (new validation)
+        guard !isLikelyTextOrLogo(in: box, of: image) else {
+            print("[PhotoFaceDetector] ❌ Area likely contains text or logo")
+            return false
+        }
+        
+        // 8. Check if the area is not a flat color region
+        guard !isFlatColorRegion(in: box, of: image) else {
+            print("[PhotoFaceDetector] ❌ Area is flat color (likely background)")
+            return false
+        }
+        
+        print("[PhotoFaceDetector] ✅ Face validation passed: \(box)")
         return true
     }
     
@@ -471,7 +493,7 @@ class PhotoFaceDetector {
         let variance = (sumSquared / Double(pixelCount)) - (mean * mean)
         
         // High variance indicates more detail
-        let minVariance: Double = 100.0 // Threshold for sufficient detail
+        let minVariance: Double = 200.0 // Increased threshold for more detail
         return variance > minVariance
     }
     
@@ -524,7 +546,7 @@ class PhotoFaceDetector {
         }
         
         let skinToneRatio = Double(skinTonePixels) / Double(pixelCount)
-        let minSkinToneRatio: Double = 0.1 // At least 10% should be skin-like
+        let minSkinToneRatio: Double = 0.2 // Increased to 20% should be skin-like
         
         return skinToneRatio > minSkinToneRatio
     }
@@ -545,6 +567,134 @@ class PhotoFaceDetector {
         // - G ratio between 0.2-0.4 (moderate green)
         // - B ratio < 0.3 (low blue)
         return rRatio > 0.3 && gRatio >= 0.2 && gRatio <= 0.4 && bRatio < 0.3
+    }
+    
+    // Check if an area is likely text or logo (high contrast, regular patterns)
+    private func isLikelyTextOrLogo(in box: CGRect, of image: UIImage) -> Bool {
+        guard let cgImage = image.cgImage else { return false }
+        
+        // Crop the area
+        let cropRect = CGRect(
+            x: box.minX * image.scale,
+            y: box.minY * image.scale,
+            width: box.width * image.scale,
+            height: box.height * image.scale
+        )
+        
+        guard let croppedCGImage = cgImage.cropping(to: cropRect) else { return false }
+        
+        // Convert to grayscale for analysis
+        let width = Int(croppedCGImage.width)
+        let height = Int(croppedCGImage.height)
+        let bytesPerRow = width
+        
+        guard let context = CGContext(data: nil,
+                                    width: width,
+                                    height: height,
+                                    bitsPerComponent: 8,
+                                    bytesPerRow: bytesPerRow,
+                                    space: CGColorSpaceCreateDeviceGray(),
+                                    bitmapInfo: CGImageAlphaInfo.none.rawValue) else {
+            return false
+        }
+        
+        context.draw(croppedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        guard let data = context.data else { return false }
+        let buffer = data.bindMemory(to: UInt8.self, capacity: width * height)
+        
+        // Calculate edge density (text/logo has high edge density)
+        var edgePixels = 0
+        let pixelCount = width * height
+        
+        for y in 1..<height-1 {
+            for x in 1..<width-1 {
+                let center = Int(buffer[y * width + x])
+                let left = Int(buffer[y * width + (x-1)])
+                let right = Int(buffer[y * width + (x+1)])
+                let top = Int(buffer[(y-1) * width + x])
+                let bottom = Int(buffer[(y+1) * width + x])
+                
+                // Check for high contrast edges
+                let horizontalEdge = abs(center - left) + abs(center - right)
+                let verticalEdge = abs(center - top) + abs(center - bottom)
+                
+                if horizontalEdge > 50 || verticalEdge > 50 {
+                    edgePixels += 1
+                }
+            }
+        }
+        
+        let edgeRatio = Double(edgePixels) / Double(pixelCount)
+        
+        // High edge density suggests text/logo
+        return edgeRatio > 0.3
+    }
+    
+    // Check if an area is flat color (likely background)
+    private func isFlatColorRegion(in box: CGRect, of image: UIImage) -> Bool {
+        guard let cgImage = image.cgImage else { return false }
+        
+        // Crop the area
+        let cropRect = CGRect(
+            x: box.minX * image.scale,
+            y: box.minY * image.scale,
+            width: box.width * image.scale,
+            height: box.height * image.scale
+        )
+        
+        guard let croppedCGImage = cgImage.cropping(to: cropRect) else { return false }
+        
+        // Convert to RGB for color analysis
+        let width = Int(croppedCGImage.width)
+        let height = Int(croppedCGImage.height)
+        let bytesPerRow = width * 4
+        
+        guard let context = CGContext(data: nil,
+                                    width: width,
+                                    height: height,
+                                    bitsPerComponent: 8,
+                                    bytesPerRow: bytesPerRow,
+                                    space: CGColorSpaceCreateDeviceRGB(),
+                                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            return false
+        }
+        
+        context.draw(croppedCGImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        guard let data = context.data else { return false }
+        let buffer = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
+        
+        // Calculate color variance
+        var rSum: Double = 0, gSum: Double = 0, bSum: Double = 0
+        var rSquared: Double = 0, gSquared: Double = 0, bSquared: Double = 0
+        let pixelCount = width * height
+        
+        for i in stride(from: 0, to: pixelCount * 4, by: 4) {
+            let r = Double(buffer[i])
+            let g = Double(buffer[i + 1])
+            let b = Double(buffer[i + 2])
+            
+            rSum += r
+            gSum += g
+            bSum += b
+            rSquared += r * r
+            gSquared += g * g
+            bSquared += b * b
+        }
+        
+        let rMean = rSum / Double(pixelCount)
+        let gMean = gSum / Double(pixelCount)
+        let bMean = bSum / Double(pixelCount)
+        
+        let rVariance = (rSquared / Double(pixelCount)) - (rMean * rMean)
+        let gVariance = (gSquared / Double(pixelCount)) - (gMean * gMean)
+        let bVariance = (bSquared / Double(pixelCount)) - (bMean * bMean)
+        
+        let totalVariance = rVariance + gVariance + bVariance
+        
+        // Low variance indicates flat color
+        return totalVariance < 500.0
     }
     
     // Convert Vision's normalized coordinates to image pixel coordinates
