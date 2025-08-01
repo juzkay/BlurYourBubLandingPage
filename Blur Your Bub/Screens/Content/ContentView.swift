@@ -76,14 +76,15 @@ struct ContentView: View {
                                     .padding(.leading, 8)
                                     .padding(.top, 8)
                             }
+                            .contentShape(Rectangle())
                             Spacer()
                             Button(action: { 
                                 // Reset everything and open new photo picker
                                 resetToNewPhoto()
                                 showingImagePicker = true 
                             }) {
-                                Text("New Photo")
-                                    .font(.system(size: 16, weight: .medium))
+                                Image(systemName: "photo.badge.plus")
+                                    .font(.system(size: 20, weight: .medium))
                                     .foregroundColor(Theme.accent)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
@@ -92,6 +93,7 @@ struct ContentView: View {
                                     .padding(.trailing, 8)
                                     .padding(.top, 8)
                             }
+                            .contentShape(Rectangle())
                         }
                         .zIndex(10)
                         if selectedImage != nil && !blurApplied {
@@ -151,6 +153,7 @@ struct ContentView: View {
                                 .background(Theme.accent)
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
+                                .contentShape(Rectangle())
                                 
                                 Button("Export") {
                                     showExportSheet = true
@@ -161,6 +164,7 @@ struct ContentView: View {
                                 .background(Color.green.opacity(0.8))
                                 .foregroundColor(.white)
                                 .cornerRadius(12)
+                                .contentShape(Rectangle())
                             }
                             .padding(.horizontal, 20)
                             .padding(.bottom, 20)
@@ -175,25 +179,27 @@ struct ContentView: View {
                                     .font(.system(size: 16, weight: .semibold))
                                     .padding(.vertical, 12)
                                     .padding(.horizontal, 24)
-                                    .background(Color.clear)
-                                    .foregroundColor(Theme.primaryText)
+                                    .background(!isDrawingMode ? Theme.accent : Color.clear)
+                                    .foregroundColor(!isDrawingMode ? .white : Theme.primaryText)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.black, lineWidth: 2)
+                                            .stroke(!isDrawingMode ? Color.clear : Color.black, lineWidth: 2)
                                     )
+                                    .contentShape(Rectangle())
                                     
-                                    Button(isDrawingMode ? "EXIT" : "DRAW") {
+                                    Button("DRAW") {
                                         isDrawingMode.toggle()
                                     }
                                     .font(.system(size: 16, weight: .semibold))
                                     .padding(.vertical, 12)
                                     .padding(.horizontal, 24)
-                                    .background(isDrawingMode ? Color.red.opacity(0.8) : Color.clear)
+                                    .background(isDrawingMode ? Theme.accent : Color.clear)
                                     .foregroundColor(isDrawingMode ? .white : Theme.primaryText)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
                                             .stroke(isDrawingMode ? Color.clear : Color.black, lineWidth: 2)
                                     )
+                                    .contentShape(Rectangle())
                                     
                                     Button("UNDO") {
                                         undoLastPath()
@@ -208,6 +214,7 @@ struct ContentView: View {
                                             .stroke(blurPaths.isEmpty ? Color.gray : Color.black, lineWidth: 2)
                                     )
                                     .disabled(blurPaths.isEmpty)
+                                    .contentShape(Rectangle())
                                 }
                                 
                                 // Apply Blur Button
@@ -217,10 +224,11 @@ struct ContentView: View {
                                 .font(.system(size: 18, weight: .bold))
                                 .padding(18)
                                 .frame(maxWidth: .infinity)
-                                .background(blurPaths.isEmpty ? Color.gray.opacity(0.6) : Color.black)
+                                .background(blurPaths.isEmpty ? Color.gray.opacity(0.6) : Theme.accent)
                                 .foregroundColor(.white)
                                 .cornerRadius(8)
                                 .disabled(blurPaths.isEmpty)
+                                .contentShape(Rectangle())
                             }
                             .padding(.horizontal, 20)
                             .padding(.bottom, 20)

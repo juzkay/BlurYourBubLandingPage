@@ -47,7 +47,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
         // UIScrollView setup
         let scrollView = UIScrollView()
         scrollView.minimumZoomScale = 0.1
-        scrollView.maximumZoomScale = 5.0
+        scrollView.maximumZoomScale = 5.75
         scrollView.bouncesZoom = true
         scrollView.showsHorizontalScrollIndicator = false
         scrollView.showsVerticalScrollIndicator = false
@@ -301,7 +301,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
             
             // Set zoom scales
             scrollView.minimumZoomScale = minScale
-            scrollView.maximumZoomScale = minScale * 3.0
+            scrollView.maximumZoomScale = minScale * 3.45
             
             // Set zoom to fit-to-screen with padding
             scrollView.setZoomScale(minScale, animated: false)
