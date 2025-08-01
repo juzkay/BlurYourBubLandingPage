@@ -426,13 +426,14 @@ class PhotoFaceDetector {
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Image bounds check")
         
-        // 2. Check minimum size requirements (increased for better accuracy)
+        // 2. Check minimum size requirements (adjusted for baby faces)
         print("🔍 [PhotoFaceDetector] Test 2: Minimum size check")
-        let minFaceSize: CGFloat = 150.0 // Increased from 100.0
+        let minFaceSize: CGFloat = 80.0 // Reduced to better capture baby faces
         print("🔍 [PhotoFaceDetector] Box size: \(box.size), Min required: \(minFaceSize)")
         
         guard box.width >= minFaceSize && box.height >= minFaceSize else {
             print("🔍 [PhotoFaceDetector] ❌ FAILED: Face too small")
+            print("🔍 [PhotoFaceDetector]   Width: \(box.width), Height: \(box.height)")
             return false
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Minimum size check")
@@ -466,7 +467,7 @@ class PhotoFaceDetector {
         
         // 5. Check if the area is not in the extreme edges (likely false positive)
         print("🔍 [PhotoFaceDetector] Test 5: Edge margin check")
-        let edgeMargin: CGFloat = 100.0 // Increased from 50.0
+        let edgeMargin: CGFloat = 30.0 // Reduced to allow faces near edges (baby in arms)
         print("🔍 [PhotoFaceDetector] Edge margin: \(edgeMargin)")
         print("🔍 [PhotoFaceDetector] Box position: minX=\(box.minX), minY=\(box.minY), maxX=\(box.maxX), maxY=\(box.maxY)")
         print("🔍 [PhotoFaceDetector] Allowed range: X=[\(edgeMargin), \(imageSize.width - edgeMargin)], Y=[\(edgeMargin), \(imageSize.height - edgeMargin)]")
@@ -475,11 +476,12 @@ class PhotoFaceDetector {
               box.maxX <= (imageSize.width - edgeMargin) && 
               box.maxY <= (imageSize.height - edgeMargin) else {
             print("🔍 [PhotoFaceDetector] ❌ FAILED: Face too close to image edges")
+            print("🔍 [PhotoFaceDetector]   This could be a partial face crop or background element")
             return false
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Edge margin check")
         
-        // 6. Enhanced skin tone check
+        // 6. Enhanced skin tone check (CRITICAL for filtering false positives)
         print("🔍 [PhotoFaceDetector] Test 6: Enhanced skin tone check")
         guard hasEnhancedSkinTone(in: box, of: image) else {
             print("🔍 [PhotoFaceDetector] ❌ FAILED: No skin tone detected")
@@ -488,7 +490,7 @@ class PhotoFaceDetector {
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Enhanced skin tone check")
         
-        // 7. Check for face-like features (new test)
+        // 7. Check for face-like features (CRITICAL for filtering backgrounds)
         print("🔍 [PhotoFaceDetector] Test 7: Face-like features check")
         guard hasFaceLikeFeatures(in: box, of: image) else {
             print("🔍 [PhotoFaceDetector] ❌ FAILED: No face-like features detected")
@@ -497,10 +499,222 @@ class PhotoFaceDetector {
         }
         print("🔍 [PhotoFaceDetector] ✅ PASSED: Face-like features check")
         
+        // 8. NEW: Check if this is likely text, logo, or geometric pattern
+        print("🔍 [PhotoFaceDetector] Test 8: Background pattern check")
+        guard !isLikelyBackgroundPattern(in: box, of: image) else {
+            print("🔍 [PhotoFaceDetector] ❌ FAILED: Detected background pattern")
+            print("🔍 [PhotoFaceDetector]   This area appears to be text, logo, or geometric pattern")
+            return false
+        }
+        print("🔍 [PhotoFaceDetector] ✅ PASSED: Background pattern check")
+        
         print("🔍 [PhotoFaceDetector] ✅ ALL TESTS PASSED - Face is valid!")
         return true
     }
     
+    // NEW: Check if this area is likely a background pattern (brick walls, geometric shapes, etc.)
+    private func isLikelyBackgroundPattern(in box: CGRect, of image: UIImage) -> Bool {
+        // Crop the face area
+        guard let croppedImage = cropFaceFromImage(image: image, boundingBox: box),
+              let cgImage = croppedImage.cgImage else {
+            print("🔍 [PhotoFaceDetector] Background pattern check: Could not crop image")
+            return false
+        }
+        
+        let width = cgImage.width
+        let height = cgImage.height
+        
+        print("🔍 [PhotoFaceDetector] Background pattern analysis for \(width)x\(height) area")
+        
+        // Check for repetitive patterns (like brick walls)
+        let isRepetitive = hasRepetitivePattern(in: croppedImage)
+        print("🔍 [PhotoFaceDetector] Repetitive pattern check: \(isRepetitive ? "DETECTED" : "Not detected")")
+        
+        if isRepetitive {
+            return true
+        }
+        
+        // Check for high edge density (typical of text/logos)
+        let edgeDensity = calculateEdgeDensity(in: croppedImage)
+        print("🔍 [PhotoFaceDetector] Edge density: \(edgeDensity)")
+        
+        if edgeDensity > 0.7 { // High edge density suggests text/geometric patterns
+            print("🔍 [PhotoFaceDetector] High edge density detected - likely text/logo")
+            return true
+        }
+        
+        // Check for uniform textures (like solid walls)
+        let textureVariance = calculateTextureVariance(in: croppedImage)
+        print("🔍 [PhotoFaceDetector] Texture variance: \(textureVariance)")
+        
+        if textureVariance < 0.1 { // Very uniform texture
+            print("🔍 [PhotoFaceDetector] Very uniform texture - likely solid background")
+            return true
+        }
+        
+        return false
+    }
+    
+    // Check for repetitive patterns (brick walls, tiles, etc.)
+    private func hasRepetitivePattern(in image: UIImage) -> Bool {
+        guard let cgImage = image.cgImage else { return false }
+        
+        let width = cgImage.width
+        let height = cgImage.height
+        
+        // Sample a small grid to check for repetition
+        let sampleSize = min(width, height) / 8
+        guard sampleSize > 4 else { return false }
+        
+        // Get pixel data
+        guard let pixelData = getPixelData(from: cgImage) else { return false }
+        
+        // Check for horizontal repetition (like brick patterns)
+        var repetitionCount = 0
+        let stepSize = max(1, sampleSize / 4)
+        
+        for y in stride(from: stepSize, to: height - sampleSize, by: stepSize) {
+            for x in stride(from: stepSize, to: width - sampleSize * 2, by: stepSize) {
+                let sample1 = getPixelSample(pixelData: pixelData, x: x, y: y, size: Int(sampleSize), width: width)
+                let sample2 = getPixelSample(pixelData: pixelData, x: x + Int(sampleSize), y: y, size: Int(sampleSize), width: width)
+                
+                if arePixelSamplesSimilar(sample1, sample2, threshold: 0.9) {
+                    repetitionCount += 1
+                }
+            }
+        }
+        
+        let totalSamples = ((height - Int(sampleSize)) / stepSize) * ((width - Int(sampleSize) * 2) / stepSize)
+        let repetitionRatio = Double(repetitionCount) / Double(max(1, totalSamples))
+        
+        print("🔍 [PhotoFaceDetector] Repetition ratio: \(repetitionRatio)")
+        return repetitionRatio > 0.3 // 30% repetition suggests pattern
+    }
+    
+    // Calculate edge density to detect text/logos
+    private func calculateEdgeDensity(in image: UIImage) -> Double {
+        guard let cgImage = image.cgImage else { return 0.0 }
+        
+        let width = cgImage.width
+        let height = cgImage.height
+        
+        guard let pixelData = getPixelData(from: cgImage) else { return 0.0 }
+        
+        var edgeCount = 0
+        let totalPixels = (width - 1) * (height - 1)
+        
+        // Simple edge detection using brightness differences
+        for y in 0..<(height - 1) {
+            for x in 0..<(width - 1) {
+                let currentPixel = getPixelBrightness(pixelData: pixelData, x: x, y: y, width: width)
+                let rightPixel = getPixelBrightness(pixelData: pixelData, x: x + 1, y: y, width: width)
+                let bottomPixel = getPixelBrightness(pixelData: pixelData, x: x, y: y + 1, width: width)
+                
+                let horizontalDiff = abs(currentPixel - rightPixel)
+                let verticalDiff = abs(currentPixel - bottomPixel)
+                
+                if horizontalDiff > 0.3 || verticalDiff > 0.3 { // Significant brightness change
+                    edgeCount += 1
+                }
+            }
+        }
+        
+        return Double(edgeCount) / Double(totalPixels)
+    }
+    
+    // Calculate texture variance to detect uniform areas
+    private func calculateTextureVariance(in image: UIImage) -> Double {
+        guard let cgImage = image.cgImage else { return 0.0 }
+        
+        let width = cgImage.width
+        let height = cgImage.height
+        
+        guard let pixelData = getPixelData(from: cgImage) else { return 0.0 }
+        
+        var brightnessValues: [Double] = []
+        
+        // Sample brightness values
+        let sampleStep = max(1, min(width, height) / 20)
+        for y in stride(from: 0, to: height, by: sampleStep) {
+            for x in stride(from: 0, to: width, by: sampleStep) {
+                let brightness = getPixelBrightness(pixelData: pixelData, x: x, y: y, width: width)
+                brightnessValues.append(brightness)
+            }
+        }
+        
+        guard !brightnessValues.isEmpty else { return 0.0 }
+        
+        // Calculate variance
+        let mean = brightnessValues.reduce(0, +) / Double(brightnessValues.count)
+        let variance = brightnessValues.map { pow($0 - mean, 2) }.reduce(0, +) / Double(brightnessValues.count)
+        
+        return sqrt(variance) // Return standard deviation
+    }
+    
+    // Helper functions for pixel analysis
+    private func getPixelData(from cgImage: CGImage) -> Data? {
+        let width = cgImage.width
+        let height = cgImage.height
+        let bytesPerPixel = 4
+        let bytesPerRow = bytesPerPixel * width
+        let totalBytes = bytesPerRow * height
+        
+        var pixelData = Data(count: totalBytes)
+        
+        pixelData.withUnsafeMutableBytes { ptr in
+            let context = CGContext(
+                data: ptr.baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )
+            
+            context?.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        }
+        
+        return pixelData
+    }
+    
+    private func getPixelBrightness(pixelData: Data, x: Int, y: Int, width: Int) -> Double {
+        let bytesPerPixel = 4
+        let index = (y * width + x) * bytesPerPixel
+        
+        guard index + 2 < pixelData.count else { return 0.0 }
+        
+        let r = Double(pixelData[index]) / 255.0
+        let g = Double(pixelData[index + 1]) / 255.0
+        let b = Double(pixelData[index + 2]) / 255.0
+        
+        return (r + g + b) / 3.0 // Simple brightness calculation
+    }
+    
+    private func getPixelSample(pixelData: Data, x: Int, y: Int, size: Int, width: Int) -> [Double] {
+        var sample: [Double] = []
+        let endX = min(x + size, width)
+        let endY = min(y + size, width) // Note: using width as max for square sample
+        
+        for sampleY in y..<endY {
+            for sampleX in x..<endX {
+                let brightness = getPixelBrightness(pixelData: pixelData, x: sampleX, y: sampleY, width: width)
+                sample.append(brightness)
+            }
+        }
+        
+        return sample
+    }
+    
+    private func arePixelSamplesSimilar(_ sample1: [Double], _ sample2: [Double], threshold: Double) -> Bool {
+        guard sample1.count == sample2.count, !sample1.isEmpty else { return false }
+        
+        let differences = zip(sample1, sample2).map { abs($0 - $1) }
+        let averageDifference = differences.reduce(0, +) / Double(differences.count)
+        
+        return averageDifference < (1.0 - threshold)
+    }
+
     // Check if an area has sufficient detail (not just flat color/text)
     private func hasSufficientDetail(in box: CGRect, of image: UIImage) -> Bool {
         guard let cgImage = image.cgImage else { return false }
