@@ -135,8 +135,11 @@ struct ContentView: View {
                                     .foregroundColor(Theme.primaryText)
                                 Slider(value: $blurRadius, in: 30...80, step: 1, onEditingChanged: { editing in
                                     if !editing {
-                                        if let orig = lastBlurredOriginal {
-                                            processedImage = BlurProcessor.applyBlur(to: orig, with: lastBlurredPaths, blurRadius: blurRadius)
+                                        // Only apply blur when user stops dragging to prevent lag
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                            if let orig = lastBlurredOriginal {
+                                                processedImage = BlurProcessor.applyBlur(to: orig, with: lastBlurredPaths, blurRadius: blurRadius)
+                                            }
                                         }
                                     }
                                 })
@@ -471,6 +474,19 @@ struct ContentView: View {
             lastBlurredPaths = []
             lastBlurredOriginal = nil
             showFinalPage = false
+            shouldResetZoom = true
+        } else if let original = selectedImage {
+            // If no lastBlurredOriginal, reset to the current selected image
+            selectedImage = original
+            blurPaths = []
+            currentPath = nil
+            processedImage = nil
+            blurApplied = false
+            isDrawingMode = false
+            lastBlurredPaths = []
+            lastBlurredOriginal = nil
+            showFinalPage = false
+            shouldResetZoom = true
         }
     }
 }
