@@ -19,6 +19,7 @@ struct PhotoEditView: View {
     @Binding var processedImage: UIImage?
     let originalImage: UIImage?
     let onAutoApplyBlur: ((BlurPath) -> Void)?
+    @Binding var shouldResetZoom: Bool
 
     var body: some View {
         ZoomablePhotoEditor(
@@ -26,7 +27,8 @@ struct PhotoEditView: View {
             blurPaths: $blurPaths,
             currentPath: $currentPath,
             isDrawingMode: $isDrawingMode,
-            onAutoApplyBlur: onAutoApplyBlur
+            onAutoApplyBlur: onAutoApplyBlur,
+            shouldResetZoom: $shouldResetZoom
         )
         .cornerRadius(12)
         .padding()
@@ -40,6 +42,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
     @Binding var currentPath: BlurPath?
     @Binding var isDrawingMode: Bool
     let onAutoApplyBlur: ((BlurPath) -> Void)?
+    @Binding var shouldResetZoom: Bool
     
     private var imageHash: Int {
         image.pngData()?.hashValue ?? 0
@@ -90,7 +93,6 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
             context.coordinator.updatePaths(newPaths: newPaths, newCurrent: newCurrent)
         }
         drawingOverlay.onAutoApplyBlur = onAutoApplyBlur
-        drawingOverlay.translatesAutoresizingMaskIntoConstraints = false
         
 
 
@@ -145,6 +147,13 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
             isDrawingMode: $isDrawingMode
         )
         context.coordinator.refreshOverlay()
+        
+        // Check if zoom reset is requested
+        if shouldResetZoom {
+            DispatchQueue.main.async {
+                context.coordinator.resetZoomToFitScreen()
+            }
+        }
         
         // Check if image has changed (original -> processed or vice versa)
         let currentImageHash = imageHash

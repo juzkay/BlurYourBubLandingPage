@@ -46,6 +46,7 @@ struct ContentView: View {
     @State private var isDrawingMode: Bool = false
     @State private var shouldAutoApplyBlur: Bool = false
     @State private var showFinalPage: Bool = false
+    @State private var shouldResetZoom: Bool = false
     
 
     
@@ -117,7 +118,8 @@ struct ContentView: View {
                             currentPath: $currentPath,
                             processedImage: $processedImage,
                             originalImage: selectedImage,
-                            onAutoApplyBlur: autoApplyBlur
+                            onAutoApplyBlur: autoApplyBlur,
+                            shouldResetZoom: $shouldResetZoom
                         )
                         .id("image_\(selectedImage?.hashValue ?? 0)_blur_\(blurApplied)") // Recreate when blur state changes
                 
@@ -379,6 +381,20 @@ struct ContentView: View {
         blurPaths = [] // Clear the paths since blur is applied
         currentPath = nil
         isDrawingMode = false // Switch back to zoom mode for next face
+        
+        // Reset zoom to fit screen after blur is applied
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            shouldResetZoom = true
+        }
+    }
+    
+    private func resetZoomToFitScreen() {
+        // Trigger zoom reset by updating the state
+        shouldResetZoom = true
+        // Reset the flag after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            shouldResetZoom = false
+        }
     }
     
     private func showShareSheetDelayed() {
