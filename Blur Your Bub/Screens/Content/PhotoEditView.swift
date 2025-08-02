@@ -153,6 +153,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
         
         // Update drawing overlay's drawing mode
         context.coordinator.drawingOverlay?.isDrawingMode = isDrawingMode
+        print("[DEBUG] updateUIView - isDrawingMode updated to: \(isDrawingMode)")
         
         // Check if zoom reset is requested
         if shouldResetZoom {
