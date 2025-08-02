@@ -153,6 +153,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
         
         // Update drawing overlay's drawing mode
         context.coordinator.drawingOverlay?.isDrawingMode = isDrawingMode
+        context.coordinator.drawingOverlay?.isDrawingEnabled = isDrawingMode
         print("[DEBUG] updateUIView - isDrawingMode updated to: \(isDrawingMode)")
         
         // Check if zoom reset is requested
@@ -227,6 +228,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
             drawingOverlay?.blurPaths = blurPaths.wrappedValue
             drawingOverlay?.currentPath = currentPath.wrappedValue
             drawingOverlay?.isDrawingMode = isDrawingMode.wrappedValue
+            drawingOverlay?.isDrawingEnabled = isDrawingMode.wrappedValue
         }
 
         func updatePaths(newPaths: [BlurPath], newCurrent: BlurPath?) {
@@ -243,6 +245,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
                 overlay.blurPaths = self.blurPathsBinding?.wrappedValue ?? []
                 overlay.currentPath = self.currentPathBinding?.wrappedValue
                 overlay.isDrawingMode = self.isDrawingModeBinding?.wrappedValue ?? false
+                overlay.isDrawingEnabled = self.isDrawingModeBinding?.wrappedValue ?? false
                 overlay.setNeedsDisplay()
             }
         }
@@ -260,7 +263,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
         func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
             isZoomingOrPanning = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.drawingOverlay?.isDrawingEnabled = self.isDrawingModeBinding?.wrappedValue ?? false
+                self.drawingOverlay?.isDrawingEnabled = self.drawingOverlay?.isDrawingMode ?? false
             }
         }
 
@@ -273,7 +276,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
             if !decelerate {
                 isZoomingOrPanning = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    self.drawingOverlay?.isDrawingEnabled = self.isDrawingModeBinding?.wrappedValue ?? false
+                    self.drawingOverlay?.isDrawingEnabled = self.drawingOverlay?.isDrawingMode ?? false
                 }
             }
         }
@@ -281,7 +284,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
             isZoomingOrPanning = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.drawingOverlay?.isDrawingEnabled = self.isDrawingModeBinding?.wrappedValue ?? false
+                self.drawingOverlay?.isDrawingEnabled = self.drawingOverlay?.isDrawingMode ?? false
             }
         }
 
@@ -414,11 +417,11 @@ class DrawingOverlayView: UIView {
     private var activePath: BlurPath? = nil
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // Allow zoom/pan when in drawing mode but no active path
-        // Only intercept touches for drawing when there's an active path
+        // When in drawing mode, always intercept touches for drawing
+        // When not in drawing mode, let touches pass through to scroll view for zoom/pan
         print("[DEBUG] hitTest - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), hasActivePath: \(activePath != nil), point: \(point)")
-        if isDrawingMode && isDrawingEnabled && activePath != nil {
-            print("[DEBUG] hitTest - intercepting touch for drawing (active path)")
+        if isDrawingMode && isDrawingEnabled {
+            print("[DEBUG] hitTest - intercepting touch for drawing")
             return super.hitTest(point, with: event)
         } else {
             // Let touches pass through to scroll view for zoom/pan
@@ -429,8 +432,8 @@ class DrawingOverlayView: UIView {
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         print("[DEBUG] point(inside:) - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), hasActivePath: \(activePath != nil), point: \(point)")
-        if isDrawingMode && isDrawingEnabled && activePath != nil {
-            print("[DEBUG] point(inside:) - returning true for drawing (active path)")
+        if isDrawingMode && isDrawingEnabled {
+            print("[DEBUG] point(inside:) - returning true for drawing")
             return true
         } else {
             print("[DEBUG] point(inside:) - returning false, passing through")
