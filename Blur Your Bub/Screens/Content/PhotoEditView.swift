@@ -408,22 +408,22 @@ class DrawingOverlayView: UIView {
     private var activePath: BlurPath? = nil
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // When in draw mode, intercept touches for drawing
-        // When in zoom mode, let touches pass through to scroll view
-        print("[DEBUG] hitTest - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), point: \(point)")
-        if isDrawingMode && isDrawingEnabled {
+        // Only intercept touches when actively drawing (has activePath)
+        // When not drawing, let touches pass through to scroll view for zoom/pan
+        print("[DEBUG] hitTest - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), hasActivePath: \(activePath != nil), point: \(point)")
+        if isDrawingMode && isDrawingEnabled && activePath != nil {
             print("[DEBUG] hitTest - intercepting touch for drawing")
             return super.hitTest(point, with: event)
         } else {
-            // Let touches pass through to scroll view for zoom/pan when not in drawing mode
+            // Let touches pass through to scroll view for zoom/pan
             print("[DEBUG] hitTest - passing touch through to scroll view")
             return nil
         }
     }
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        print("[DEBUG] point(inside:) - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), point: \(point)")
-        if isDrawingMode && isDrawingEnabled {
+        print("[DEBUG] point(inside:) - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), hasActivePath: \(activePath != nil), point: \(point)")
+        if isDrawingMode && isDrawingEnabled && activePath != nil {
             print("[DEBUG] point(inside:) - returning true for drawing")
             return true
         } else {
@@ -443,6 +443,11 @@ class DrawingOverlayView: UIView {
         print("[DEBUG] touchesBegan - touch point: \(touch.location(in: self)), converted: \(point)")
         activePath = BlurPath(points: [point])
         setNeedsDisplay()
+        
+        // Force a hit test update to start intercepting touches
+        DispatchQueue.main.async {
+            self.setNeedsDisplay()
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
