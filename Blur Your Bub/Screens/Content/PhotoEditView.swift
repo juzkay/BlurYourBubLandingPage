@@ -408,10 +408,10 @@ class DrawingOverlayView: UIView {
     private var activePath: BlurPath? = nil
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // Only intercept touches when actively drawing (has activePath)
-        // When not drawing, let touches pass through to scroll view for zoom/pan
+        // When in drawing mode, intercept touches for drawing (even if no active path yet)
+        // When not in drawing mode, let touches pass through to scroll view for zoom/pan
         print("[DEBUG] hitTest - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), hasActivePath: \(activePath != nil), point: \(point)")
-        if isDrawingMode && isDrawingEnabled && activePath != nil {
+        if isDrawingMode && isDrawingEnabled {
             print("[DEBUG] hitTest - intercepting touch for drawing")
             return super.hitTest(point, with: event)
         } else {
@@ -423,7 +423,7 @@ class DrawingOverlayView: UIView {
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         print("[DEBUG] point(inside:) - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), hasActivePath: \(activePath != nil), point: \(point)")
-        if isDrawingMode && isDrawingEnabled && activePath != nil {
+        if isDrawingMode && isDrawingEnabled {
             print("[DEBUG] point(inside:) - returning true for drawing")
             return true
         } else {
@@ -444,9 +444,10 @@ class DrawingOverlayView: UIView {
         activePath = BlurPath(points: [point])
         setNeedsDisplay()
         
-        // Force a hit test update to start intercepting touches
+        // Force a layout update to ensure touch interception works correctly
         DispatchQueue.main.async {
             self.setNeedsDisplay()
+            self.setNeedsLayout()
         }
     }
 
