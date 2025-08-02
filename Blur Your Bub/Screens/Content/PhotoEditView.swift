@@ -159,6 +159,10 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
         if shouldResetZoom {
             DispatchQueue.main.async {
                 context.coordinator.resetZoomToFitScreen()
+                // Clear the flag immediately after triggering the reset
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    self.shouldResetZoom = false
+                }
             }
         }
         
@@ -357,10 +361,11 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
             let heightScale = paddedSize.height / imageSize.height
             let minScale = min(widthScale, heightScale)
             
-            scrollView.setZoomScale(minScale, animated: true)
-            
-            // Center after zoom
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            // Use a smoother animation
+            UIView.animate(withDuration: 0.4, delay: 0, options: [.curveEaseInOut], animations: {
+                scrollView.setZoomScale(minScale, animated: false)
+            }) { _ in
+                // Center after zoom animation completes
                 self.centerContent()
             }
         }
@@ -409,11 +414,11 @@ class DrawingOverlayView: UIView {
     private var activePath: BlurPath? = nil
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // When in drawing mode, intercept touches for drawing (even if no active path yet)
-        // When not in drawing mode, let touches pass through to scroll view for zoom/pan
+        // Allow zoom/pan when in drawing mode but no active path
+        // Only intercept touches for drawing when there's an active path
         print("[DEBUG] hitTest - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), hasActivePath: \(activePath != nil), point: \(point)")
-        if isDrawingMode && isDrawingEnabled {
-            print("[DEBUG] hitTest - intercepting touch for drawing")
+        if isDrawingMode && isDrawingEnabled && activePath != nil {
+            print("[DEBUG] hitTest - intercepting touch for drawing (active path)")
             return super.hitTest(point, with: event)
         } else {
             // Let touches pass through to scroll view for zoom/pan
@@ -424,8 +429,8 @@ class DrawingOverlayView: UIView {
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         print("[DEBUG] point(inside:) - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), hasActivePath: \(activePath != nil), point: \(point)")
-        if isDrawingMode && isDrawingEnabled {
-            print("[DEBUG] point(inside:) - returning true for drawing")
+        if isDrawingMode && isDrawingEnabled && activePath != nil {
+            print("[DEBUG] point(inside:) - returning true for drawing (active path)")
             return true
         } else {
             print("[DEBUG] point(inside:) - returning false, passing through")
@@ -443,12 +448,14 @@ class DrawingOverlayView: UIView {
         let point = convertTouchToImageCoordinates(touch: touch.location(in: self))
         print("[DEBUG] touchesBegan - touch point: \(touch.location(in: self)), converted: \(point)")
         activePath = BlurPath(points: [point])
-        setNeedsDisplay()
         
         // Force a layout update to ensure touch interception works correctly
+        self.setNeedsLayout()
+        self.setNeedsDisplay()
+        
+        // Update hitTest behavior after setting activePath
         DispatchQueue.main.async {
             self.setNeedsDisplay()
-            self.setNeedsLayout()
         }
     }
 

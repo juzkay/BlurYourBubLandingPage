@@ -43,7 +43,11 @@ struct ContentView: View {
     // Removed showingVideoBlur and all VideoBlurView references
     @State private var showExportSheet = false
     @State private var showSaveSuccess = false
-    @State private var isDrawingMode: Bool = false
+    @State private var isDrawingMode: Bool = false {
+        didSet {
+            print("[DEBUG] ContentView - isDrawingMode changed from \(oldValue) to \(isDrawingMode)")
+        }
+    }
     @State private var shouldAutoApplyBlur: Bool = false
     @State private var showFinalPage: Bool = false
     @State private var shouldResetZoom: Bool = false
@@ -386,7 +390,7 @@ struct ContentView: View {
         // Keep drawing mode active so user can continue drawing
         
         // Reset zoom to fit screen after blur is applied
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             shouldResetZoom = true
         }
     }
