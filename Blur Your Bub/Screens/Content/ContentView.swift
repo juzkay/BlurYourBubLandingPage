@@ -26,6 +26,8 @@ struct Theme {
 
 // MARK: - Main Content View
 struct ContentView: View {
+    @StateObject private var settingsManager = SettingsManager()
+    @StateObject private var localizationManager = LocalizationManager()
     @State private var selectedImage: UIImage?
     @State private var processedImage: UIImage?
     @State private var showingImagePicker = false
@@ -39,8 +41,7 @@ struct ContentView: View {
     @State private var blurApplied: Bool = false
     // Video blur screen presentation
     @State private var showVideoBlurScreen = false
-    // AI Photo blur screen presentation
-    @State private var showAIPhotoBlurScreen = false
+
     // Drawing out-of-bounds error
     @State private var showDrawError = false
     // Removed showingVideoBlur and all VideoBlurView references
@@ -54,6 +55,8 @@ struct ContentView: View {
     @State private var shouldAutoApplyBlur: Bool = false
     @State private var showFinalPage: Bool = false
     @State private var shouldResetZoom: Bool = false
+    // Settings
+    @State private var showSettings = false
     
 
     
@@ -76,7 +79,7 @@ struct ContentView: View {
                     Theme.background.ignoresSafeArea()
                 }
                 VStack(spacing: 12) { // Reduce overall vertical spacing
-                    // Home icon and New Photo button
+                    // Home icon, New Photo button, and Settings
                     if selectedImage != nil || processedImage != nil {
                         HStack(alignment: .center, spacing: 0) {
                             Button(action: resetApp) {
@@ -104,6 +107,19 @@ struct ContentView: View {
                                     .padding(.top, 8)
                             }
                             .contentShape(Rectangle())
+                            
+                            Button(action: { showSettings = true }) {
+                                Image(systemName: "gearshape")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(Theme.accent)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 8)
+                                    .background(Theme.card)
+                                    .cornerRadius(Theme.buttonCornerRadius)
+                                    .padding(.trailing, 8)
+                                    .padding(.top, 8)
+                            }
+                            .contentShape(Rectangle())
                         }
                         .zIndex(10)
                         if selectedImage != nil && !blurApplied {
@@ -116,6 +132,20 @@ struct ContentView: View {
                                 Spacer()
                             }
                         }
+                    } else {
+                        // Settings button for empty state
+                        HStack {
+                            Spacer()
+                            Button(action: { showSettings = true }) {
+                                Image(systemName: "gearshape")
+                                    .font(.system(size: 24, weight: .regular))
+                                    .foregroundColor(Theme.accent)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 12)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .zIndex(10)
                     }
                     if let image = processedImage ?? selectedImage {
                         PhotoEditView(
@@ -258,7 +288,11 @@ struct ContentView: View {
                             .padding(.bottom, 20)
                         }
                     } else {
-                        EmptyStateView(showingImagePicker: $showingImagePicker, showVideoBlurScreen: $showVideoBlurScreen, showAIPhotoBlurScreen: $showAIPhotoBlurScreen)
+                        EmptyStateView(
+                            showingImagePicker: $showingImagePicker, 
+                            showVideoBlurScreen: $showVideoBlurScreen,
+                            localizationManager: localizationManager
+                        )
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                     // Remove BottomControlsView since buttons are now in PhotoEditView
@@ -318,8 +352,9 @@ struct ContentView: View {
         .sheet(isPresented: $showVideoBlurScreen) {
             VideoBlurScreen()
         }
-        .sheet(isPresented: $showAIPhotoBlurScreen) {
-            AIPhotoBlurView()
+
+        .sheet(isPresented: $showSettings) {
+            SettingsView(settingsManager: settingsManager, localizationManager: localizationManager)
         }
         .alert(isPresented: $showDrawError) {
             Alert(title: Text("Drawing Error"),
@@ -329,20 +364,7 @@ struct ContentView: View {
         .alert(isPresented: $showSaveSuccess) {
             Alert(title: Text("Saved!"), message: Text("Image saved to your device."), dismissButton: .default(Text("OK")))
         }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SwitchToManualPhotoEdit"))) { notification in
-            if let image = notification.object as? UIImage {
-                // Switch to manual photo editing mode with the selected image
-                selectedImage = image
-                processedImage = nil
-                blurPaths = []
-                currentPath = nil
-                blurApplied = false
-                lastBlurredPaths = []
-                lastBlurredOriginal = nil
-                isDrawingMode = false
-                showAIPhotoBlurScreen = false
-            }
-        }
+
     }
     
     private func onImageSelected() {
@@ -370,7 +392,6 @@ struct ContentView: View {
         showingImagePicker = false
         showingShareSheet = false
         showVideoBlurScreen = false
-        showAIPhotoBlurScreen = false
         showDrawError = false
         isDrawingMode = false
         showFinalPage = false
@@ -520,7 +541,7 @@ struct ContentView: View {
 struct EmptyStateView: View {
     @Binding var showingImagePicker: Bool
     @Binding var showVideoBlurScreen: Bool
-    @Binding var showAIPhotoBlurScreen: Bool
+    @ObservedObject var localizationManager: LocalizationManager
     var body: some View {
         VStack(spacing: 12) {
             Image("Transparent Baby")
@@ -540,7 +561,7 @@ struct EmptyStateView: View {
             Button(action: { showingImagePicker = true }) {
                 HStack {
                     Image(systemName: "photo")
-                    Text("Choose Photo")
+                    Text(localizationManager.localizedString("Select Photo"))
                 }
                 .font(Theme.fontSubtitle)
                 .frame(maxWidth: .infinity)
@@ -554,7 +575,7 @@ struct EmptyStateView: View {
             Button(action: { showVideoBlurScreen = true }) {
                 HStack {
                     Image(systemName: "video.fill")
-                    Text("Choose Video")
+                    Text(localizationManager.localizedString("Select Video"))
                 }
                 .font(Theme.fontSubtitle)
                 .frame(maxWidth: .infinity)
@@ -565,20 +586,7 @@ struct EmptyStateView: View {
                 .shadow(color: Theme.shadow, radius: 8, x: 0, y: 4)
             }
             .padding(.horizontal, 24)
-            Button(action: { showAIPhotoBlurScreen = true }) {
-                HStack {
-                    Image(systemName: "brain.head.profile")
-                    Text("AI Photo Blur")
-                }
-                .font(Theme.fontSubtitle)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Theme.accent)
-                .foregroundColor(.white)
-                .cornerRadius(Theme.buttonCornerRadius)
-                .shadow(color: Theme.shadow, radius: 8, x: 0, y: 4)
-            }
-            .padding(.horizontal, 24)
+
             Spacer()
         }
         .padding(.top, 24)
@@ -1341,4 +1349,1139 @@ struct ExportPopupModal: View {
         .transition(.scale)
         .animation(.spring(), value: 1)
     }
+}
+
+// MARK: - Settings View
+struct SettingsView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @ObservedObject var settingsManager: SettingsManager
+    @ObservedObject var localizationManager: LocalizationManager
+    @State private var showPhotoSettings = false
+    @State private var showVideoSettings = false
+    @State private var showLanguagePicker = false
+    @State private var showClearCacheAlert = false
+    
+    let languages = ["English", "Spanish", "French", "German", "Italian", "Portuguese", "Chinese", "Japanese", "Korean"]
+    let photoFormats = ["Auto", "HEIF", "JPEG", "PNG"]
+    let videoResolutions = ["720p", "1080p", "4K"]
+    let videoFrameRates = ["24fps", "30fps", "60fps"]
+    let videoFormats = ["MOV", "MP4"]
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Theme.background.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(Theme.accent)
+                        }
+                        Spacer()
+                        Text(localizationManager.localizedString("Settings"))
+                            .font(Theme.fontTitle)
+                            .foregroundColor(Theme.primaryText)
+                        Spacer()
+                        // Empty space for balance
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.clear)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // Upgrade Section
+                            SettingsSection(title: "Premium") {
+                                SettingsRow(
+                                    icon: "crown.fill",
+                                    iconColor: .orange,
+                                    title: localizationManager.localizedString("Upgrade to BlurYourBub Pro!"),
+                                    subtitle: "Unlock advanced features",
+                                    showArrow: true
+                                ) {
+                                    // Dummy action for upgrade
+                                }
+                            }
+                            
+                            // Photo Settings Section
+                            SettingsSection(title: localizationManager.localizedString("Photo Settings")) {
+                                SettingsRow(
+                                    icon: "photo",
+                                    iconColor: .green,
+                                    title: localizationManager.localizedString("Photo Setting"),
+                                    subtitle: settingsManager.photoFormat,
+                                    showArrow: true
+                                ) {
+                                    showPhotoSettings = true
+                                }
+                            }
+                            
+                            // Video Settings Section
+                            SettingsSection(title: localizationManager.localizedString("Video Settings")) {
+                                SettingsRow(
+                                    icon: "video.fill",
+                                    iconColor: .blue,
+                                    title: localizationManager.localizedString("Video Setting"),
+                                    subtitle: "\(settingsManager.videoResolution) • \(settingsManager.videoFrameRate) • \(settingsManager.videoFormat)",
+                                    showArrow: true
+                                ) {
+                                    showVideoSettings = true
+                                }
+                            }
+                            
+                            // App Settings Section
+                            SettingsSection(title: "App Settings") {
+                                SettingsRow(
+                                    icon: "trash",
+                                    iconColor: .gray,
+                                    title: localizationManager.localizedString("Clear Cache"),
+                                    subtitle: "\(settingsManager.getCacheSize()) • Free up storage space",
+                                    showArrow: false
+                                ) {
+                                    showClearCacheAlert = true
+                                }
+                                
+                                SettingsRow(
+                                    icon: "globe",
+                                    iconColor: .gray,
+                                    title: localizationManager.localizedString("Language"),
+                                    subtitle: settingsManager.selectedLanguage,
+                                    showArrow: true
+                                ) {
+                                    showLanguagePicker = true
+                                }
+                            }
+                            
+                            // Engagement Section
+                            SettingsSection(title: "Support") {
+                                SettingsRow(
+                                    icon: "star.fill",
+                                    iconColor: .yellow,
+                                    title: localizationManager.localizedString("Rate us on App Store"),
+                                    subtitle: "Help us grow",
+                                    showArrow: true
+                                ) {
+                                    // Open App Store rating
+                                }
+                                
+                                SettingsRow(
+                                    icon: "square.and.arrow.up",
+                                    iconColor: .gray,
+                                    title: localizationManager.localizedString("Invite Friends"),
+                                    subtitle: "Share the app",
+                                    showArrow: true
+                                ) {
+                                    // Share app
+                                }
+                                
+                                SettingsRow(
+                                    icon: "envelope",
+                                    iconColor: .gray,
+                                    title: localizationManager.localizedString("Send Feedback"),
+                                    subtitle: "Help us improve",
+                                    showArrow: true
+                                ) {
+                                    // Send feedback
+                                }
+                            }
+                            
+                            // Legal Section
+                            SettingsSection(title: "Legal") {
+                                SettingsRow(
+                                    icon: "eye",
+                                    iconColor: .gray,
+                                    title: "Privacy & Terms",
+                                    subtitle: "Read our policies",
+                                    showArrow: true
+                                ) {
+                                    // Show privacy & terms
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                    }
+                }
+            }
+        }
+        .navigationBarHidden(true)
+        .sheet(isPresented: $showPhotoSettings) {
+            PhotoSettingsView(settingsManager: settingsManager)
+        }
+        .sheet(isPresented: $showVideoSettings) {
+            VideoSettingsView(settingsManager: settingsManager)
+        }
+        .sheet(isPresented: $showLanguagePicker) {
+            LanguagePickerView(settingsManager: settingsManager, localizationManager: localizationManager)
+        }
+        .alert(isPresented: $showClearCacheAlert) {
+            Alert(
+                title: Text(localizationManager.localizedString("Clear Cache")),
+                message: Text(localizationManager.localizedString("This will free up storage space by clearing temporary files and cached data.")),
+                primaryButton: .destructive(Text(localizationManager.localizedString("Clear Cache"))) {
+                    settingsManager.clearCache()
+                },
+                secondaryButton: .cancel(Text(localizationManager.localizedString("Cancel")))
+            )
+        }
+    }
+}
+
+// MARK: - Language Picker View
+struct LanguagePickerView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @ObservedObject var settingsManager: SettingsManager
+    @ObservedObject var localizationManager: LocalizationManager
+    @State private var showRestartAlert = false
+    @State private var selectedLanguage = ""
+    
+    let languages = [
+        ("English", "English"),
+        ("Spanish", "Español"),
+        ("French", "Français"),
+        ("German", "Deutsch"),
+        ("Italian", "Italiano"),
+        ("Portuguese", "Português"),
+        ("Chinese", "中文"),
+        ("Japanese", "日本語"),
+        ("Korean", "한국어")
+    ]
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Theme.background.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(Theme.accent)
+                        }
+                        Spacer()
+                        Text("Language")
+                            .font(Theme.fontTitle)
+                            .foregroundColor(Theme.primaryText)
+                        Spacer()
+                        // Empty space for balance
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.clear)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    
+                    VStack(spacing: 0) {
+                        VStack(spacing: 0) {
+                            ForEach(languages, id: \.0) { language in
+                                Button(action: {
+                                    selectedLanguage = language.0
+                                    settingsManager.saveLanguage(language.0)
+                                    showRestartAlert = true
+                                }) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(language.0)
+                                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                                .foregroundColor(Theme.primaryText)
+                                            
+                                            Text(language.1)
+                                                .font(.system(size: 14, weight: .regular, design: .rounded))
+                                                .foregroundColor(Theme.secondaryText)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        if settingsManager.selectedLanguage == language.0 {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(Theme.accent)
+                                        }
+                                    }
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 16)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                if language.0 != languages.last?.0 {
+                                    Divider()
+                                        .padding(.leading, 20)
+                                }
+                            }
+                        }
+                        .background(Color.white)
+                        .cornerRadius(Theme.cardCornerRadius)
+                        .shadow(color: Theme.shadow, radius: 8, x: 0, y: 2)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .navigationBarHidden(true)
+        .alert(isPresented: $showRestartAlert) {
+            Alert(
+                title: Text(localizationManager.localizedString("Language Changed")),
+                message: Text(String(format: localizationManager.localizedString("The app language has been changed to %@. Please close and reopen the app to see the changes."), selectedLanguage)),
+                primaryButton: .default(Text(localizationManager.localizedString("Close App"))) {
+                    // Exit the app to trigger close
+                    exit(0)
+                },
+                secondaryButton: .cancel(Text(localizationManager.localizedString("Later"))) {
+                    presentationMode.wrappedValue.dismiss()
+                }
+            )
+        }
+    }
+}
+
+// MARK: - Photo Settings View
+struct PhotoSettingsView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @ObservedObject var settingsManager: SettingsManager
+    
+    let formats = [
+        ("Auto", "Automatic format selection"),
+        ("HEIF", "Smaller Size"),
+        ("JPEG", "Better Compatibility"),
+        ("PNG", "Higher Quality")
+    ]
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Theme.background.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(Theme.accent)
+                        }
+                        Spacer()
+                        Text("Photo Setting")
+                            .font(Theme.fontTitle)
+                            .foregroundColor(Theme.primaryText)
+                        Spacer()
+                        // Empty space for balance
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.clear)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    
+                    VStack(spacing: 0) {
+                        Text("Saving Format")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundColor(Theme.primaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 20)
+                            .padding(.bottom, 12)
+                        
+                        VStack(spacing: 0) {
+                            ForEach(formats, id: \.0) { format in
+                                Button(action: {
+                                    settingsManager.savePhotoFormat(format.0)
+                                    presentationMode.wrappedValue.dismiss()
+                                }) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(format.0)
+                                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                                .foregroundColor(Theme.primaryText)
+                                            
+                                            if !format.1.isEmpty {
+                                                Text(format.1)
+                                                    .font(.system(size: 14, weight: .regular, design: .rounded))
+                                                    .foregroundColor(Theme.secondaryText)
+                                            }
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        if settingsManager.photoFormat == format.0 {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(Theme.accent)
+                                        }
+                                    }
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 16)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                
+                                if format.0 != formats.last?.0 {
+                                    Divider()
+                                        .padding(.leading, 20)
+                                }
+                            }
+                        }
+                        .background(Color.white)
+                        .cornerRadius(Theme.cardCornerRadius)
+                        .shadow(color: Theme.shadow, radius: 8, x: 0, y: 2)
+                        .padding(.horizontal, 20)
+                        
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .navigationBarHidden(true)
+    }
+}
+
+// MARK: - Video Settings View
+struct VideoSettingsView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @ObservedObject var settingsManager: SettingsManager
+    
+    let resolutions = ["720p", "1080p", "4K"]
+    let frameRates = ["24fps", "30fps", "60fps"]
+    let formats = ["MOV", "MP4"]
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Theme.background.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(Theme.accent)
+                        }
+                        Spacer()
+                        Text("Video Setting")
+                            .font(Theme.fontTitle)
+                            .foregroundColor(Theme.primaryText)
+                        Spacer()
+                        // Empty space for balance
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.clear)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    
+                    VStack(spacing: 24) {
+                        // Video Resolution
+                        VStack(spacing: 0) {
+                            Text("Video Resolution")
+                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                .foregroundColor(Theme.primaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 20)
+                                .padding(.bottom, 12)
+                            
+                            VStack(spacing: 0) {
+                                ForEach(resolutions, id: \.self) { resolution in
+                                    Button(action: {
+                                        settingsManager.saveVideoSettings(
+                                            resolution: resolution,
+                                            frameRate: settingsManager.videoFrameRate,
+                                            format: settingsManager.videoFormat
+                                        )
+                                    }) {
+                                        HStack {
+                                            Text(resolution)
+                                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                                .foregroundColor(Theme.primaryText)
+                                            
+                                            Spacer()
+                                            
+                                            if settingsManager.videoResolution == resolution {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 16, weight: .medium))
+                                                    .foregroundColor(Theme.accent)
+                                            }
+                                        }
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 16)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    if resolution != resolutions.last {
+                                        Divider()
+                                            .padding(.leading, 20)
+                                    }
+                                }
+                            }
+                            .background(Color.white)
+                            .cornerRadius(Theme.cardCornerRadius)
+                            .shadow(color: Theme.shadow, radius: 8, x: 0, y: 2)
+                            .padding(.horizontal, 20)
+                        }
+                        
+                        // Frame Rate
+                        VStack(spacing: 0) {
+                            Text("Frame rate")
+                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                .foregroundColor(Theme.primaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 12)
+                            
+                            VStack(spacing: 0) {
+                                ForEach(frameRates, id: \.self) { frameRate in
+                                    Button(action: {
+                                        settingsManager.saveVideoSettings(
+                                            resolution: settingsManager.videoResolution,
+                                            frameRate: frameRate,
+                                            format: settingsManager.videoFormat
+                                        )
+                                    }) {
+                                        HStack {
+                                            Text(frameRate)
+                                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                                .foregroundColor(Theme.primaryText)
+                                            
+                                            Spacer()
+                                            
+                                            if settingsManager.videoFrameRate == frameRate {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 16, weight: .medium))
+                                                    .foregroundColor(Theme.accent)
+                                            }
+                                        }
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 16)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    if frameRate != frameRates.last {
+                                        Divider()
+                                            .padding(.leading, 20)
+                                    }
+                                }
+                            }
+                            .background(Color.white)
+                            .cornerRadius(Theme.cardCornerRadius)
+                            .shadow(color: Theme.shadow, radius: 8, x: 0, y: 2)
+                            .padding(.horizontal, 20)
+                        }
+                        
+                        // Format
+                        VStack(spacing: 0) {
+                            Text("Format")
+                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                .foregroundColor(Theme.primaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 12)
+                            
+                            VStack(spacing: 0) {
+                                ForEach(formats, id: \.self) { format in
+                                    Button(action: {
+                                        settingsManager.saveVideoSettings(
+                                            resolution: settingsManager.videoResolution,
+                                            frameRate: settingsManager.videoFrameRate,
+                                            format: format
+                                        )
+                                    }) {
+                                        HStack {
+                                            Text(format)
+                                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                                .foregroundColor(Theme.primaryText)
+                                            
+                                            Spacer()
+                                            
+                                            if settingsManager.videoFormat == format {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 16, weight: .medium))
+                                                    .foregroundColor(Theme.accent)
+                                            }
+                                        }
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 16)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    
+                                    if format != formats.last {
+                                        Divider()
+                                            .padding(.leading, 20)
+                                    }
+                                }
+                            }
+                            .background(Color.white)
+                            .cornerRadius(Theme.cardCornerRadius)
+                            .shadow(color: Theme.shadow, radius: 8, x: 0, y: 2)
+                            .padding(.horizontal, 20)
+                        }
+                        
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .navigationBarHidden(true)
+    }
+}
+
+// MARK: - Settings Components
+struct SettingsSection<Content: View>: View {
+    let title: String
+    let content: Content
+    
+    init(title: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundColor(Theme.secondaryText)
+                .padding(.leading, 4)
+            
+            VStack(spacing: 0) {
+                content
+            }
+            .background(Color.white)
+            .cornerRadius(Theme.cardCornerRadius)
+            .shadow(color: Theme.shadow, radius: 8, x: 0, y: 2)
+        }
+    }
+}
+
+struct SettingsRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let subtitle: String
+    let showArrow: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(iconColor)
+                    .frame(width: 24, height: 24)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundColor(Theme.primaryText)
+                    
+                    Text(subtitle)
+                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                        .foregroundColor(Theme.secondaryText)
+                }
+                
+                Spacer()
+                
+                if showArrow {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Theme.secondaryText)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Settings Manager
+class SettingsManager: ObservableObject {
+    @Published var photoFormat: String = UserDefaults.standard.string(forKey: "photoFormat") ?? "Auto"
+    @Published var videoResolution: String = UserDefaults.standard.string(forKey: "videoResolution") ?? "1080p"
+    @Published var videoFrameRate: String = UserDefaults.standard.string(forKey: "videoFrameRate") ?? "30fps"
+    @Published var videoFormat: String = UserDefaults.standard.string(forKey: "videoFormat") ?? "MOV"
+    
+    @ObservedObject var localizationManager = LocalizationManager()
+    
+    var selectedLanguage: String {
+        get { localizationManager.currentLanguage }
+        set { localizationManager.changeLanguage(to: newValue) }
+    }
+    
+    func savePhotoFormat(_ format: String) {
+        photoFormat = format
+        UserDefaults.standard.set(format, forKey: "photoFormat")
+    }
+    
+    func saveVideoSettings(resolution: String, frameRate: String, format: String) {
+        videoResolution = resolution
+        videoFrameRate = frameRate
+        videoFormat = format
+        UserDefaults.standard.set(resolution, forKey: "videoResolution")
+        UserDefaults.standard.set(frameRate, forKey: "videoFrameRate")
+        UserDefaults.standard.set(format, forKey: "videoFormat")
+    }
+    
+    func saveLanguage(_ language: String) {
+        selectedLanguage = language
+        UserDefaults.standard.set(language, forKey: "selectedLanguage")
+    }
+    
+    func clearCache() {
+        // Clear image cache
+        URLCache.shared.removeAllCachedResponses()
+        
+        // Clear temporary files
+        let tempDirectory = FileManager.default.temporaryDirectory
+        do {
+            let tempFiles = try FileManager.default.contentsOfDirectory(at: tempDirectory, includingPropertiesForKeys: nil)
+            for file in tempFiles {
+                try FileManager.default.removeItem(at: file)
+            }
+        } catch {
+            logger.error("Failed to clear cache: \(error.localizedDescription)")
+        }
+        
+        // Clear UserDefaults cache
+        UserDefaults.standard.synchronize()
+    }
+    
+    func getCacheSize() -> String {
+        // Calculate cache size (simplified)
+        return "~2.3 MB"
+    }
+}
+
+// MARK: - Localization Manager
+class LocalizationManager: ObservableObject {
+    @Published var currentLanguage: String = UserDefaults.standard.string(forKey: "selectedLanguage") ?? "English"
+    
+    let availableLanguages = [
+        ("English", "en"),
+        ("Spanish", "es"),
+        ("French", "fr"),
+        ("German", "de"),
+        ("Italian", "it"),
+        ("Portuguese", "pt"),
+        ("Chinese", "zh"),
+        ("Japanese", "ja"),
+        ("Korean", "ko")
+    ]
+    
+    func changeLanguage(to language: String) {
+        currentLanguage = language
+        UserDefaults.standard.set(language, forKey: "selectedLanguage")
+        
+        // Post notification for language change
+        NotificationCenter.default.post(name: NSNotification.Name("LanguageChanged"), object: language)
+    }
+    
+    func localizedString(_ key: String) -> String {
+        switch currentLanguage {
+        case "Spanish":
+            return spanishTranslations[key] ?? key
+        case "French":
+            return frenchTranslations[key] ?? key
+        case "German":
+            return germanTranslations[key] ?? key
+        case "Italian":
+            return italianTranslations[key] ?? key
+        case "Portuguese":
+            return portugueseTranslations[key] ?? key
+        case "Chinese":
+            return chineseTranslations[key] ?? key
+        case "Japanese":
+            return japaneseTranslations[key] ?? key
+        case "Korean":
+            return koreanTranslations[key] ?? key
+        default:
+            return englishTranslations[key] ?? key
+        }
+    }
+    
+    // Translation dictionaries
+    private let englishTranslations: [String: String] = [
+        "Select Photo": "Select Photo",
+        "Select Video": "Select Video",
+        "Settings": "Settings",
+        "Photo Settings": "Photo Settings",
+        "Video Settings": "Video Settings",
+        "Clear Cache": "Clear Cache",
+        "Language": "Language",
+        "Rate us on App Store": "Rate us on App Store",
+        "Invite Friends": "Invite Friends",
+        "Send Feedback": "Send Feedback",
+        "Privacy & Terms": "Privacy & Terms",
+        "Upgrade to BlurYourBub Pro!": "Upgrade to BlurYourBub Pro!",
+        "Photo Setting": "Photo Setting",
+        "Video Setting": "Video Setting",
+        "Automatic format selection": "Automatic format selection",
+        "Smaller Size": "Smaller Size",
+        "Better Compatibility": "Better Compatibility",
+        "Higher Quality": "Higher Quality",
+        "Resolution": "Resolution",
+        "Frame Rate": "Frame Rate",
+        "Format": "Format",
+        "This will free up storage space by clearing temporary files and cached data.": "This will free up storage space by clearing temporary files and cached data.",
+        "Cancel": "Cancel",
+        "Saved!": "Saved!",
+        "Image saved to your device.": "Image saved to your device.",
+        "OK": "OK",
+        "Drawing Error": "Drawing Error",
+        "Please draw only within the photo preview area.": "Please draw only within the photo preview area.",
+        "New Photo": "New Photo",
+        "Apply Blur": "Apply Blur",
+        "Share": "Share",
+        "Save": "Save",
+        "Reset": "Reset",
+        "Home": "Home",
+        "Language Changed": "Language Changed",
+        "The app language has been changed to %@. Please close and reopen the app to see the changes.": "The app language has been changed to %@. Please close and reopen the app to see the changes.",
+        "Restart App": "Restart App",
+        "Later": "Later",
+        "Close App": "Close App"
+    ]
+    
+    private let spanishTranslations: [String: String] = [
+        "Select Photo": "Seleccionar Foto",
+        "Select Video": "Seleccionar Video",
+        "Settings": "Configuración",
+        "Photo Settings": "Configuración de Foto",
+        "Video Settings": "Configuración de Video",
+        "Clear Cache": "Limpiar Caché",
+        "Language": "Idioma",
+        "Rate us on App Store": "Califícanos en App Store",
+        "Invite Friends": "Invitar Amigos",
+        "Send Feedback": "Enviar Comentarios",
+        "Privacy & Terms": "Privacidad y Términos",
+        "Upgrade to BlurYourBub Pro!": "¡Actualiza a BlurYourBub Pro!",
+        "Photo Setting": "Configuración de Foto",
+        "Video Setting": "Configuración de Video",
+        "Automatic format selection": "Selección automática de formato",
+        "Smaller Size": "Tamaño más pequeño",
+        "Better Compatibility": "Mejor compatibilidad",
+        "Higher Quality": "Mayor calidad",
+        "Resolution": "Resolución",
+        "Frame Rate": "Velocidad de fotogramas",
+        "Format": "Formato",
+        "This will free up storage space by clearing temporary files and cached data.": "Esto liberará espacio de almacenamiento eliminando archivos temporales y datos en caché.",
+        "Cancel": "Cancelar",
+        "Saved!": "¡Guardado!",
+        "Image saved to your device.": "Imagen guardada en tu dispositivo.",
+        "OK": "OK",
+        "Drawing Error": "Error de Dibujo",
+        "Please draw only within the photo preview area.": "Por favor dibuja solo dentro del área de vista previa de la foto.",
+        "New Photo": "Nueva Foto",
+        "Apply Blur": "Aplicar Desenfoque",
+        "Share": "Compartir",
+        "Save": "Guardar",
+        "Reset": "Restablecer",
+        "Home": "Inicio",
+        "Language Changed": "Idioma Cambiado",
+        "The app language has been changed to %@. Please close and reopen the app to see the changes.": "El idioma de la aplicación ha sido cambiado a %@. Por favor cierra y vuelve a abrir la aplicación para ver los cambios.",
+        "Restart App": "Reiniciar App",
+        "Later": "Más Tarde",
+        "Close App": "Cerrar App"
+    ]
+    
+    private let frenchTranslations: [String: String] = [
+        "Select Photo": "Sélectionner Photo",
+        "Select Video": "Sélectionner Vidéo",
+        "Settings": "Paramètres",
+        "Photo Settings": "Paramètres Photo",
+        "Video Settings": "Paramètres Vidéo",
+        "Clear Cache": "Vider le Cache",
+        "Language": "Langue",
+        "Rate us on App Store": "Évaluez-nous sur App Store",
+        "Invite Friends": "Inviter des Amis",
+        "Send Feedback": "Envoyer un Commentaire",
+        "Privacy & Terms": "Confidentialité et Conditions",
+        "Upgrade to BlurYourBub Pro!": "Passez à BlurYourBub Pro !",
+        "Photo Setting": "Paramètre Photo",
+        "Video Setting": "Paramètre Vidéo",
+        "Automatic format selection": "Sélection automatique du format",
+        "Smaller Size": "Taille plus petite",
+        "Better Compatibility": "Meilleure compatibilité",
+        "Higher Quality": "Qualité supérieure",
+        "Resolution": "Résolution",
+        "Frame Rate": "Taux de trame",
+        "Format": "Format",
+        "This will free up storage space by clearing temporary files and cached data.": "Cela libérera de l'espace de stockage en supprimant les fichiers temporaires et les données en cache.",
+        "Cancel": "Annuler",
+        "Saved!": "Enregistré !",
+        "Image saved to your device.": "Image enregistrée sur votre appareil.",
+        "OK": "OK",
+        "Drawing Error": "Erreur de Dessin",
+        "Please draw only within the photo preview area.": "Veuillez dessiner uniquement dans la zone de prévisualisation de la photo.",
+        "New Photo": "Nouvelle Photo",
+        "Apply Blur": "Appliquer le Flou",
+        "Share": "Partager",
+        "Save": "Enregistrer",
+        "Reset": "Réinitialiser",
+        "Home": "Accueil",
+        "Language Changed": "Langue Modifiée",
+        "The app language has been changed to %@. Please close and reopen the app to see the changes.": "La langue de l'application a été changée vers %@. Veuillez fermer et rouvrir l'application pour voir les changements.",
+        "Restart App": "Redémarrer l'App",
+        "Later": "Plus Tard",
+        "Close App": "Fermer l'App"
+    ]
+    
+    private let germanTranslations: [String: String] = [
+        "Select Photo": "Foto auswählen",
+        "Select Video": "Video auswählen",
+        "Settings": "Einstellungen",
+        "Photo Settings": "Foto-Einstellungen",
+        "Video Settings": "Video-Einstellungen",
+        "Clear Cache": "Cache leeren",
+        "Language": "Sprache",
+        "Rate us on App Store": "Bewerten Sie uns im App Store",
+        "Invite Friends": "Freunde einladen",
+        "Send Feedback": "Feedback senden",
+        "Privacy & Terms": "Datenschutz & Bedingungen",
+        "Upgrade to BlurYourBub Pro!": "Upgrade auf BlurYourBub Pro!",
+        "Photo Setting": "Foto-Einstellung",
+        "Video Setting": "Video-Einstellung",
+        "Automatic format selection": "Automatische Formatauswahl",
+        "Smaller Size": "Kleinere Größe",
+        "Better Compatibility": "Bessere Kompatibilität",
+        "Higher Quality": "Höhere Qualität",
+        "Resolution": "Auflösung",
+        "Frame Rate": "Bildrate",
+        "Format": "Format",
+        "This will free up storage space by clearing temporary files and cached data.": "Dies wird Speicherplatz freigeben, indem temporäre Dateien und zwischengespeicherte Daten gelöscht werden.",
+        "Cancel": "Abbrechen",
+        "Saved!": "Gespeichert!",
+        "Image saved to your device.": "Bild auf Ihrem Gerät gespeichert.",
+        "OK": "OK",
+        "Drawing Error": "Zeichenfehler",
+        "Please draw only within the photo preview area.": "Bitte zeichnen Sie nur innerhalb des Foto-Vorschaubereichs.",
+        "New Photo": "Neues Foto",
+        "Apply Blur": "Unschärfe anwenden",
+        "Share": "Teilen",
+        "Save": "Speichern",
+        "Reset": "Zurücksetzen",
+        "Home": "Startseite",
+        "Language Changed": "Sprache Geändert",
+        "The app language has been changed to %@. Please close and reopen the app to see the changes.": "Die App-Sprache wurde zu %@ geändert. Bitte schließen und öffnen Sie die App erneut, um die Änderungen zu sehen.",
+        "Restart App": "App Neustarten",
+        "Later": "Später",
+        "Close App": "App Schließen"
+    ]
+    
+    private let italianTranslations: [String: String] = [
+        "Select Photo": "Seleziona Foto",
+        "Select Video": "Seleziona Video",
+        "Settings": "Impostazioni",
+        "Photo Settings": "Impostazioni Foto",
+        "Video Settings": "Impostazioni Video",
+        "Clear Cache": "Cancella Cache",
+        "Language": "Lingua",
+        "Rate us on App Store": "Valutaci su App Store",
+        "Invite Friends": "Invita Amici",
+        "Send Feedback": "Invia Feedback",
+        "Privacy & Terms": "Privacy e Termini",
+        "Upgrade to BlurYourBub Pro!": "Passa a BlurYourBub Pro!",
+        "Photo Setting": "Impostazione Foto",
+        "Video Setting": "Impostazione Video",
+        "Automatic format selection": "Selezione formato automatica",
+        "Smaller Size": "Dimensione più piccola",
+        "Better Compatibility": "Migliore compatibilità",
+        "Higher Quality": "Qualità superiore",
+        "Resolution": "Risoluzione",
+        "Frame Rate": "Frame rate",
+        "Format": "Formato",
+        "This will free up storage space by clearing temporary files and cached data.": "Questo libererà spazio di archiviazione cancellando file temporanei e dati in cache.",
+        "Cancel": "Annulla",
+        "Saved!": "Salvato!",
+        "Image saved to your device.": "Immagine salvata sul tuo dispositivo.",
+        "OK": "OK",
+        "Drawing Error": "Errore di Disegno",
+        "Please draw only within the photo preview area.": "Disegna solo nell'area di anteprima della foto.",
+        "New Photo": "Nuova Foto",
+        "Apply Blur": "Applica Sfocatura",
+        "Share": "Condividi",
+        "Save": "Salva",
+        "Reset": "Ripristina",
+        "Home": "Home",
+        "Language Changed": "Lingua Cambiata",
+        "The app language has been changed to %@. Please close and reopen the app to see the changes.": "La lingua dell'app è stata cambiata in %@. Chiudi e riapri l'app per vedere le modifiche.",
+        "Restart App": "Riavvia App",
+        "Later": "Più Tardi",
+        "Close App": "Chiudi App"
+    ]
+    
+    private let portugueseTranslations: [String: String] = [
+        "Select Photo": "Selecionar Foto",
+        "Select Video": "Selecionar Vídeo",
+        "Settings": "Configurações",
+        "Photo Settings": "Configurações de Foto",
+        "Video Settings": "Configurações de Vídeo",
+        "Clear Cache": "Limpar Cache",
+        "Language": "Idioma",
+        "Rate us on App Store": "Avalie-nos na App Store",
+        "Invite Friends": "Convidar Amigos",
+        "Send Feedback": "Enviar Feedback",
+        "Privacy & Terms": "Privacidade e Termos",
+        "Upgrade to BlurYourBub Pro!": "Atualize para BlurYourBub Pro!",
+        "Photo Setting": "Configuração de Foto",
+        "Video Setting": "Configuração de Vídeo",
+        "Automatic format selection": "Seleção automática de formato",
+        "Smaller Size": "Tamanho menor",
+        "Better Compatibility": "Melhor compatibilidade",
+        "Higher Quality": "Qualidade superior",
+        "Resolution": "Resolução",
+        "Frame Rate": "Taxa de quadros",
+        "Format": "Formato",
+        "This will free up storage space by clearing temporary files and cached data.": "Isso liberará espaço de armazenamento limpando arquivos temporários e dados em cache.",
+        "Cancel": "Cancelar",
+        "Saved!": "Salvo!",
+        "Image saved to your device.": "Imagem salva no seu dispositivo.",
+        "OK": "OK",
+        "Drawing Error": "Erro de Desenho",
+        "Please draw only within the photo preview area.": "Desenhe apenas na área de visualização da foto.",
+        "New Photo": "Nova Foto",
+        "Apply Blur": "Aplicar Desfoque",
+        "Share": "Compartilhar",
+        "Save": "Salvar",
+        "Reset": "Redefinir",
+        "Home": "Início",
+        "Language Changed": "Idioma Alterado",
+        "The app language has been changed to %@. Please close and reopen the app to see the changes.": "O idioma do aplicativo foi alterado para %@. Reinicie o aplicativo para ver as alterações.",
+        "Restart App": "Reiniciar App",
+        "Later": "Mais Tarde",
+        "Close App": "Fechar App"
+    ]
+    
+    private let chineseTranslations: [String: String] = [
+        "Select Photo": "选择照片",
+        "Select Video": "选择视频",
+        "Settings": "设置",
+        "Photo Settings": "照片设置",
+        "Video Settings": "视频设置",
+        "Clear Cache": "清除缓存",
+        "Language": "语言",
+        "Rate us on App Store": "在App Store评价我们",
+        "Invite Friends": "邀请朋友",
+        "Send Feedback": "发送反馈",
+        "Privacy & Terms": "隐私和条款",
+        "Upgrade to BlurYourBub Pro!": "升级到BlurYourBub Pro！",
+        "Photo Setting": "照片设置",
+        "Video Setting": "视频设置",
+        "Automatic format selection": "自动格式选择",
+        "Smaller Size": "更小尺寸",
+        "Better Compatibility": "更好兼容性",
+        "Higher Quality": "更高质量",
+        "Resolution": "分辨率",
+        "Frame Rate": "帧率",
+        "Format": "格式",
+        "This will free up storage space by clearing temporary files and cached data.": "这将通过清除临时文件和缓存数据来释放存储空间。",
+        "Cancel": "取消",
+        "Saved!": "已保存！",
+        "Image saved to your device.": "图片已保存到您的设备。",
+        "OK": "确定",
+        "Drawing Error": "绘制错误",
+        "Please draw only within the photo preview area.": "请在照片预览区域内绘制。",
+        "New Photo": "新照片",
+        "Apply Blur": "应用模糊",
+        "Share": "分享",
+        "Save": "保存",
+        "Reset": "重置",
+        "Home": "主页",
+        "Language Changed": "语言已更改",
+        "The app language has been changed to %@. Please close and reopen the app to see the changes.": "应用语言已更改为 %@。请关闭并重新打开应用以查看更改。",
+        "Restart App": "重启应用",
+        "Later": "稍后",
+        "Close App": "关闭应用"
+    ]
+    
+    private let japaneseTranslations: [String: String] = [
+        "Select Photo": "写真を選択",
+        "Select Video": "動画を選択",
+        "Settings": "設定",
+        "Photo Settings": "写真設定",
+        "Video Settings": "動画設定",
+        "Clear Cache": "キャッシュをクリア",
+        "Language": "言語",
+        "Rate us on App Store": "App Storeで評価する",
+        "Invite Friends": "友達を招待",
+        "Send Feedback": "フィードバックを送信",
+        "Privacy & Terms": "プライバシーと利用規約",
+        "Upgrade to BlurYourBub Pro!": "BlurYourBub Proにアップグレード！",
+        "Photo Setting": "写真設定",
+        "Video Setting": "動画設定",
+        "Automatic format selection": "自動フォーマット選択",
+        "Smaller Size": "小さいサイズ",
+        "Better Compatibility": "より良い互換性",
+        "Higher Quality": "より高い品質",
+        "Resolution": "解像度",
+        "Frame Rate": "フレームレート",
+        "Format": "フォーマット",
+        "This will free up storage space by clearing temporary files and cached data.": "一時ファイルとキャッシュデータをクリアしてストレージ容量を解放します。",
+        "Cancel": "キャンセル",
+        "Saved!": "保存されました！",
+        "Image saved to your device.": "画像がデバイスに保存されました。",
+        "OK": "OK",
+        "Drawing Error": "描画エラー",
+        "Please draw only within the photo preview area.": "写真プレビューエリア内でのみ描画してください。",
+        "New Photo": "新しい写真",
+        "Apply Blur": "ぼかしを適用",
+        "Share": "共有",
+        "Save": "保存",
+        "Reset": "リセット",
+        "Home": "ホーム",
+        "Language Changed": "言語が変更されました",
+        "The app language has been changed to %@. Please close and reopen the app to see the changes.": "アプリの言語が %@ に変更されました。変更を確認するにはアプリを閉じて再度開いてください。",
+        "Restart App": "アプリを再起動",
+        "Later": "後で",
+        "Close App": "アプリを閉じる"
+    ]
+    
+    private let koreanTranslations: [String: String] = [
+        "Select Photo": "사진 선택",
+        "Select Video": "비디오 선택",
+        "Settings": "설정",
+        "Photo Settings": "사진 설정",
+        "Video Settings": "비디오 설정",
+        "Clear Cache": "캐시 지우기",
+        "Language": "언어",
+        "Rate us on App Store": "App Store에서 평가하기",
+        "Invite Friends": "친구 초대",
+        "Send Feedback": "피드백 보내기",
+        "Privacy & Terms": "개인정보 및 이용약관",
+        "Upgrade to BlurYourBub Pro!": "BlurYourBub Pro로 업그레이드!",
+        "Photo Setting": "사진 설정",
+        "Video Setting": "비디오 설정",
+        "Automatic format selection": "자동 형식 선택",
+        "Smaller Size": "더 작은 크기",
+        "Better Compatibility": "더 나은 호환성",
+        "Higher Quality": "더 높은 품질",
+        "Resolution": "해상도",
+        "Frame Rate": "프레임 레이트",
+        "Format": "형식",
+        "This will free up storage space by clearing temporary files and cached data.": "임시 파일과 캐시된 데이터를 지워서 저장 공간을 확보합니다.",
+        "Cancel": "취소",
+        "Saved!": "저장됨!",
+        "Image saved to your device.": "이미지가 기기에 저장되었습니다.",
+        "OK": "확인",
+        "Drawing Error": "그리기 오류",
+        "Please draw only within the photo preview area.": "사진 미리보기 영역 내에서만 그려주세요.",
+        "New Photo": "새 사진",
+        "Apply Blur": "블러 적용",
+        "Share": "공유",
+        "Save": "저장",
+        "Reset": "재설정",
+        "Home": "홈",
+        "Language Changed": "언어가 변경되었습니다",
+        "The app language has been changed to %@. Please close and reopen the app to see the changes.": "앱 언어가 %@로 변경되었습니다. 변경사항을 확인하려면 앱을 다시 시작하세요.",
+        "Restart App": "앱 재시작",
+        "Later": "나중에",
+        "Close App": "앱 닫기"
+    ]
 }
