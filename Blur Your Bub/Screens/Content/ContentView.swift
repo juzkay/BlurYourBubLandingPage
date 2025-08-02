@@ -44,6 +44,7 @@ struct ContentView: View {
     @State private var showExportSheet = false
     @State private var showSaveSuccess = false
     @State private var isDrawingMode: Bool = false
+    @State private var shouldAutoApplyBlur: Bool = false
     
 
     
@@ -114,7 +115,8 @@ struct ContentView: View {
                             blurPaths: $blurPaths,
                             currentPath: $currentPath,
                             processedImage: $processedImage,
-                            originalImage: selectedImage
+                            originalImage: selectedImage,
+                            onAutoApplyBlur: autoApplyBlur
                         )
                         .id("image_\(selectedImage?.hashValue ?? 0)_blur_\(blurApplied)") // Recreate when blur state changes
                 
@@ -171,6 +173,13 @@ struct ContentView: View {
                         } else {
                             // Pre-blur UI: Drawing controls
                             VStack(spacing: 16) {
+                                // Instructions
+                                Text("Draw around faces to blur them automatically")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(Theme.secondaryText)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal)
+                                
                                 // Top row: Zoom, Draw, Undo
                                 HStack(spacing: 16) {
                                     Button("ZOOM") {
@@ -218,19 +227,6 @@ struct ContentView: View {
                                     .disabled(blurPaths.isEmpty)
                                     .contentShape(Rectangle())
                                 }
-                                
-                                // Apply Blur Button
-                                Button("APPLY BLUR") {
-                                    applyBlur()
-                                }
-                                .font(.system(size: 18, weight: .bold))
-                                .padding(18)
-                                .frame(maxWidth: .infinity)
-                                .background(blurPaths.isEmpty ? Color.gray.opacity(0.6) : Theme.accent)
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                                .disabled(blurPaths.isEmpty)
-                                .contentShape(Rectangle())
                             }
                             .padding(.horizontal, 20)
                             .padding(.bottom, 20)
@@ -348,6 +344,20 @@ struct ContentView: View {
         blurPaths = []
         currentPath = nil
         isDrawingMode = false // Disable drawing after blur
+    }
+    
+    private func autoApplyBlur(for completedPath: BlurPath) {
+        guard let originalImage = selectedImage else { return }
+        
+        // Create a single path array with the completed path
+        let singlePath = [completedPath]
+        lastBlurredPaths = singlePath
+        lastBlurredOriginal = originalImage
+        processedImage = BlurProcessor.applyBlur(to: originalImage, with: singlePath, blurRadius: blurRadius)
+        blurApplied = true
+        blurPaths = [] // Clear the paths since blur is applied
+        currentPath = nil
+        isDrawingMode = false // Switch back to zoom mode
     }
     
     private func showShareSheetDelayed() {

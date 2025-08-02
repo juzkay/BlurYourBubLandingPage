@@ -18,13 +18,15 @@ struct PhotoEditView: View {
     @Binding var currentPath: BlurPath?
     @Binding var processedImage: UIImage?
     let originalImage: UIImage?
+    let onAutoApplyBlur: ((BlurPath) -> Void)?
 
     var body: some View {
         ZoomablePhotoEditor(
             image: image,
             blurPaths: $blurPaths,
             currentPath: $currentPath,
-            isDrawingMode: $isDrawingMode
+            isDrawingMode: $isDrawingMode,
+            onAutoApplyBlur: onAutoApplyBlur
         )
         .cornerRadius(12)
         .padding()
@@ -37,6 +39,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
     @Binding var blurPaths: [BlurPath]
     @Binding var currentPath: BlurPath?
     @Binding var isDrawingMode: Bool
+    let onAutoApplyBlur: ((BlurPath) -> Void)?
     
     private var imageHash: Int {
         image.pngData()?.hashValue ?? 0
@@ -86,6 +89,7 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
         drawingOverlay.onPathChanged = { newPaths, newCurrent in
             context.coordinator.updatePaths(newPaths: newPaths, newCurrent: newCurrent)
         }
+        drawingOverlay.onAutoApplyBlur = onAutoApplyBlur
         drawingOverlay.translatesAutoresizingMaskIntoConstraints = false
         
 
@@ -384,6 +388,7 @@ class DrawingOverlayView: UIView {
     }
     var isDrawingEnabled: Bool = true
     var onPathChanged: ((_ newPaths: [BlurPath], _ newCurrent: BlurPath?) -> Void)?
+    var onAutoApplyBlur: ((BlurPath) -> Void)?
 
     private var activePath: BlurPath? = nil
     
@@ -427,6 +432,11 @@ class DrawingOverlayView: UIView {
             var newPaths = blurPaths
             newPaths.append(path)
             onPathChanged?(newPaths, nil)
+            
+            // Automatically apply blur when path is completed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.onAutoApplyBlur?(path) // Call the auto-apply blur callback
+            }
         }
         
         activePath = nil
