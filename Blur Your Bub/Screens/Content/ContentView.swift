@@ -45,6 +45,7 @@ struct ContentView: View {
     @State private var showSaveSuccess = false
     @State private var isDrawingMode: Bool = false
     @State private var shouldAutoApplyBlur: Bool = false
+    @State private var showFinalPage: Bool = false
     
 
     
@@ -125,7 +126,7 @@ struct ContentView: View {
                         .padding(.vertical, 8)
 
                         // Blur strength slider (move under photo when blur is applied)
-                        if blurApplied {
+                        if blurApplied || showFinalPage {
                             VStack(spacing: 8) {
                                 Text("Set your desired amount of blur")
                                     .font(.system(size: 16, weight: .semibold))
@@ -143,7 +144,7 @@ struct ContentView: View {
                         }
 
                         // Different UI based on blur state
-                        if blurApplied {
+                        if blurApplied || showFinalPage {
                             // Post-blur UI: Redo and Share buttons
                             VStack(spacing: 16) {
                                 Button("Start Again") {
@@ -227,6 +228,19 @@ struct ContentView: View {
                                     .disabled(blurPaths.isEmpty)
                                     .contentShape(Rectangle())
                                 }
+                                
+                                // Done Button
+                                Button("DONE") {
+                                    // Move to final page with blur strength and share options
+                                    showFinalPage = true
+                                }
+                                .font(.system(size: 18, weight: .bold))
+                                .padding(18)
+                                .frame(maxWidth: .infinity)
+                                .background(Theme.accent)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                                .contentShape(Rectangle())
                             }
                             .padding(.horizontal, 20)
                             .padding(.bottom, 20)
@@ -321,14 +335,15 @@ struct ContentView: View {
         processedImage = nil
         blurPaths = []
         currentPath = nil
-        blurApplied = false
         lastBlurredPaths = []
         lastBlurredOriginal = nil
+        blurApplied = false
         showingImagePicker = false
         showingShareSheet = false
         showVideoBlurScreen = false
         showDrawError = false
         isDrawingMode = false
+        showFinalPage = false
     }
     
     private func applyBlur() {
@@ -354,10 +369,10 @@ struct ContentView: View {
         lastBlurredPaths = singlePath
         lastBlurredOriginal = originalImage
         processedImage = BlurProcessor.applyBlur(to: originalImage, with: singlePath, blurRadius: blurRadius)
-        blurApplied = true
+        // Don't set blurApplied = true - stay on drawing page
         blurPaths = [] // Clear the paths since blur is applied
         currentPath = nil
-        isDrawingMode = false // Switch back to zoom mode
+        isDrawingMode = false // Switch back to zoom mode for next face
     }
     
     private func showShareSheetDelayed() {
@@ -395,6 +410,7 @@ struct ContentView: View {
         showingShareSheet = false
         showDrawError = false
         showExportSheet = false
+        showFinalPage = false
     }
     
     // Clear all drawings at any point
@@ -421,6 +437,7 @@ struct ContentView: View {
             isDrawingMode = false
             lastBlurredPaths = []
             lastBlurredOriginal = nil
+            showFinalPage = false
         }
     }
 }
