@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		D0969D392E3B7B5E0054184A /* BlurPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0969D382E3B7B5E0054184A /* BlurPath.swift */; };
+		D0969D3B2E3C57460054184A /* PhotoDetectedFace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0969D3A2E3C57460054184A /* PhotoDetectedFace.swift */; };
+		D0969D3D2E3C57590054184A /* PhotoFaceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0969D3C2E3C57590054184A /* PhotoFaceDetector.swift */; };
+		D0969D412E3C57710054184A /* AIPhotoEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0969D3F2E3C57710054184A /* AIPhotoEditView.swift */; };
+		D0969D422E3C57710054184A /* AIPhotoBlurView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0969D3E2E3C57710054184A /* AIPhotoBlurView.swift */; };
 		D0A9B2B32E31F12900C1ED40 /* VideoBlurViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A9B2B22E31F12900C1ED40 /* VideoBlurViewModel.swift */; };
 		D0A9B2B52E31F13B00C1ED40 /* VideoBlurProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A9B2B42E31F13B00C1ED40 /* VideoBlurProcessor.swift */; };
 		D0A9B2BA2E33120900C1ED40 /* PhotoEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A9B2B92E33120900C1ED40 /* PhotoEditView.swift */; };
@@ -44,6 +48,10 @@
 
 /* Begin PBXFileReference section */
 		D0969D382E3B7B5E0054184A /* BlurPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlurPath.swift; sourceTree = "<group>"; };
+		D0969D3A2E3C57460054184A /* PhotoDetectedFace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoDetectedFace.swift; sourceTree = "<group>"; };
+		D0969D3C2E3C57590054184A /* PhotoFaceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoFaceDetector.swift; sourceTree = "<group>"; };
+		D0969D3E2E3C57710054184A /* AIPhotoBlurView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPhotoBlurView.swift; sourceTree = "<group>"; };
+		D0969D3F2E3C57710054184A /* AIPhotoEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPhotoEditView.swift; sourceTree = "<group>"; };
 		D0A9B2B22E31F12900C1ED40 /* VideoBlurViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoBlurViewModel.swift; sourceTree = "<group>"; };
 		D0A9B2B42E31F13B00C1ED40 /* VideoBlurProcessor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoBlurProcessor.swift; sourceTree = "<group>"; };
 		D0A9B2B92E33120900C1ED40 /* PhotoEditView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoEditView.swift; sourceTree = "<group>"; };
@@ -89,6 +97,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D0969D402E3C57710054184A /* AIPhotoBlur */ = {
+			isa = PBXGroup;
+			children = (
+				D0969D3E2E3C57710054184A /* AIPhotoBlurView.swift */,
+				D0969D3F2E3C57710054184A /* AIPhotoEditView.swift */,
+			);
+			path = AIPhotoBlur;
+			sourceTree = "<group>";
+		};
 		D0A9B2B62E326AB300C1ED40 /* Fonts */ = {
 			isa = PBXGroup;
 			children = (
@@ -170,6 +187,7 @@
 			isa = PBXGroup;
 			children = (
 				D0969D382E3B7B5E0054184A /* BlurPath.swift */,
+				D0969D3A2E3C57460054184A /* PhotoDetectedFace.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -177,6 +195,7 @@
 		D0FD30B42E31F08300251A55 /* Screens */ = {
 			isa = PBXGroup;
 			children = (
+				D0969D402E3C57710054184A /* AIPhotoBlur */,
 				D0FD30B52E31F08300251A55 /* VideoBlur */,
 				D0FD30B72E31F08300251A55 /* Content */,
 			);
@@ -205,6 +224,7 @@
 		D0FD30B92E31F08300251A55 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				D0969D3C2E3C57590054184A /* PhotoFaceDetector.swift */,
 				D0FD30BA2E31F08300251A55 /* RealtimeFaceBlurProcessor.swift */,
 				D0FD30BB2E31F08300251A55 /* FaceBlurVideoCompositor.swift */,
 			);
@@ -353,12 +373,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0FD30BE2E31F08300251A55 /* VideoBlurScreen.swift in Sources */,
+				D0969D3B2E3C57460054184A /* PhotoDetectedFace.swift in Sources */,
 				D0A9B2BA2E33120900C1ED40 /* PhotoEditView.swift in Sources */,
 				D0A9B2B52E31F13B00C1ED40 /* VideoBlurProcessor.swift in Sources */,
+				D0969D3D2E3C57590054184A /* PhotoFaceDetector.swift in Sources */,
 				D0A9B2B32E31F12900C1ED40 /* VideoBlurViewModel.swift in Sources */,
 				D0FD30C02E31F08300251A55 /* RealtimeFaceBlurProcessor.swift in Sources */,
 				D0969D392E3B7B5E0054184A /* BlurPath.swift in Sources */,
 				D0FD30BD2E31F08300251A55 /* Blur_Your_BubApp.swift in Sources */,
+				D0969D412E3C57710054184A /* AIPhotoEditView.swift in Sources */,
+				D0969D422E3C57710054184A /* AIPhotoBlurView.swift in Sources */,
 				D0FD30BF2E31F08300251A55 /* ContentView.swift in Sources */,
 				D0FD30C12E31F08300251A55 /* FaceBlurVideoCompositor.swift in Sources */,
 			);
