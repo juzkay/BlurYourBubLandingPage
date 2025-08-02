@@ -380,7 +380,7 @@ struct ContentView: View {
         // Don't set blurApplied = true - stay on drawing page
         blurPaths = [] // Clear the paths since blur is applied
         currentPath = nil
-        isDrawingMode = false // Switch back to zoom mode for next face
+        // Keep drawing mode active so user can continue drawing
         
         // Reset zoom to fit screen after blur is applied
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
