@@ -220,12 +220,12 @@ struct ContentView: View {
                                     .padding(.vertical, 12)
                                     .padding(.horizontal, 24)
                                     .background(Color.clear)
-                                    .foregroundColor(blurPaths.isEmpty ? Color.gray : Theme.primaryText)
+                                    .foregroundColor(lastBlurredPaths.isEmpty ? Color.gray : Theme.primaryText)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .stroke(blurPaths.isEmpty ? Color.gray : Color.black, lineWidth: 2)
+                                            .stroke(lastBlurredPaths.isEmpty ? Color.gray : Color.black, lineWidth: 2)
                                     )
-                                    .disabled(blurPaths.isEmpty)
+                                    .disabled(lastBlurredPaths.isEmpty)
                                     .contentShape(Rectangle())
                                 }
                                 
@@ -364,11 +364,17 @@ struct ContentView: View {
     private func autoApplyBlur(for completedPath: BlurPath) {
         guard let originalImage = selectedImage else { return }
         
-        // Create a single path array with the completed path
-        let singlePath = [completedPath]
-        lastBlurredPaths = singlePath
+        // Add the new path to the existing blurred paths
+        if lastBlurredPaths.isEmpty {
+            // First blur - start with the completed path
+            lastBlurredPaths = [completedPath]
+        } else {
+            // Subsequent blurs - add to existing paths
+            lastBlurredPaths.append(completedPath)
+        }
+        
         lastBlurredOriginal = originalImage
-        processedImage = BlurProcessor.applyBlur(to: originalImage, with: singlePath, blurRadius: blurRadius)
+        processedImage = BlurProcessor.applyBlur(to: originalImage, with: lastBlurredPaths, blurRadius: blurRadius)
         // Don't set blurApplied = true - stay on drawing page
         blurPaths = [] // Clear the paths since blur is applied
         currentPath = nil
@@ -391,9 +397,20 @@ struct ContentView: View {
     
     // Add undo function to remove the last drawn path
     private func undoLastPath() {
-        if !blurPaths.isEmpty {
-            blurPaths.removeLast()
+        if !lastBlurredPaths.isEmpty {
+            lastBlurredPaths.removeLast()
             currentPath = nil
+            
+            // Reapply blur with remaining paths
+            if let originalImage = lastBlurredOriginal {
+                if lastBlurredPaths.isEmpty {
+                    // No more blur paths - show original image
+                    processedImage = originalImage
+                } else {
+                    // Reapply blur with remaining paths
+                    processedImage = BlurProcessor.applyBlur(to: originalImage, with: lastBlurredPaths, blurRadius: blurRadius)
+                }
+            }
         }
     }
     
