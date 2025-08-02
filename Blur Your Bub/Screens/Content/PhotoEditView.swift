@@ -528,14 +528,20 @@ class DrawingOverlayView: UIView {
         // 2. Convert to scroll view content coordinates
         let imageViewFrame = imageView.frame
         let contentPoint = CGPoint(
-            x: (imageViewPoint.x + imageViewFrame.origin.x / zoomScale) * zoomScale,
-            y: (imageViewPoint.y + imageViewFrame.origin.y / zoomScale) * zoomScale
+            x: imageViewPoint.x + imageViewFrame.origin.x,
+            y: imageViewPoint.y + imageViewFrame.origin.y
         )
         
-        // 3. Convert to screen coordinates (accounting for scroll offset)
+        // 3. Apply zoom scale
+        let zoomedPoint = CGPoint(
+            x: contentPoint.x * zoomScale,
+            y: contentPoint.y * zoomScale
+        )
+        
+        // 4. Convert to screen coordinates (accounting for scroll offset)
         let screenPoint = CGPoint(
-            x: contentPoint.x - scrollView.contentOffset.x,
-            y: contentPoint.y - scrollView.contentOffset.y
+            x: zoomedPoint.x - scrollView.contentOffset.x,
+            y: zoomedPoint.y - scrollView.contentOffset.y
         )
         
         return screenPoint
