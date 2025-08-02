@@ -386,16 +386,14 @@ class DrawingOverlayView: UIView {
     var onPathChanged: ((_ newPaths: [BlurPath], _ newCurrent: BlurPath?) -> Void)?
 
     private var activePath: BlurPath? = nil
-    private var isDrawingActive: Bool = false
-    private var lastTouchTime: TimeInterval = 0
-    private var touchStartPoint: CGPoint = .zero
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        // Only intercept touches when drawing mode is enabled AND we're actively drawing
-        if isDrawingMode && isDrawingEnabled && isDrawingActive {
+        // When drawing mode is enabled, intercept touches for drawing
+        // But allow zoom gestures (multiple touches) to pass through
+        if isDrawingMode && isDrawingEnabled {
             return super.hitTest(point, with: event)
         } else {
-            // Let touches pass through to scroll view for zoom/pan when not actively drawing
+            // Let touches pass through to scroll view for zoom/pan when not in drawing mode
             return nil
         }
     }
@@ -405,11 +403,6 @@ class DrawingOverlayView: UIView {
             return 
         }
         
-        // Start drawing mode
-        isDrawingActive = true
-        lastTouchTime = touch.timestamp
-        touchStartPoint = touch.location(in: self)
-        
         let point = convertTouchToImageCoordinates(touch: touch.location(in: self))
         activePath = BlurPath(points: [point])
         setNeedsDisplay()
@@ -418,10 +411,9 @@ class DrawingOverlayView: UIView {
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard isDrawingEnabled, isDrawingMode, let touch = touches.first, var path = activePath else { return }
         
-        // Check if this is a zoom/pan gesture (multiple touches or significant movement)
-        if touches.count > 1 || (touch.location(in: self).distance(to: touchStartPoint) > 20) {
-            // This might be a zoom/pan gesture, let it pass through
-            isDrawingActive = false
+        // Only detect zoom/pan gestures (multiple touches), not drawing movements
+        if touches.count > 1 {
+            // This is a zoom/pan gesture, let it pass through
             activePath = nil
             setNeedsDisplay()
             return
@@ -435,25 +427,22 @@ class DrawingOverlayView: UIView {
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard isDrawingEnabled, isDrawingMode, let path = activePath else { 
-            isDrawingActive = false
             return 
         }
         
-        // Only complete the path if we were actually drawing
-        if isDrawingActive && path.points.count > 1 {
+        // Complete the path if it has multiple points
+        if path.points.count > 1 {
             var newPaths = blurPaths
             newPaths.append(path)
             onPathChanged?(newPaths, nil)
         }
         
         activePath = nil
-        isDrawingActive = false
         setNeedsDisplay()
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         activePath = nil
-        isDrawingActive = false
         setNeedsDisplay()
     }
 
