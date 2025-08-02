@@ -83,6 +83,8 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
         let drawingOverlay = DrawingOverlayView()
         drawingOverlay.backgroundColor = .clear
         drawingOverlay.isUserInteractionEnabled = true
+        drawingOverlay.translatesAutoresizingMaskIntoConstraints = false
+        drawingOverlay.isMultipleTouchEnabled = false
         drawingOverlay.blurPaths = blurPaths
         drawingOverlay.currentPath = currentPath
         drawingOverlay.scrollView = scrollView
@@ -107,17 +109,18 @@ struct ZoomablePhotoEditor: UIViewRepresentable {
 
         // Add subviews
         containerView.addSubview(scrollView)
+        // Add drawing overlay on top
         containerView.addSubview(drawingOverlay)
-
-        // Constraints
+        context.coordinator.drawingOverlay = drawingOverlay
+        
+        // Constraints - ensure drawing overlay covers the entire container
         NSLayoutConstraint.activate([
             scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
             scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
 
-            // Remove imageView constraints - we'll handle sizing manually for proper zoom behavior
-
+            // Drawing overlay should cover the entire container view
             drawingOverlay.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             drawingOverlay.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
             drawingOverlay.topAnchor.constraint(equalTo: containerView.topAnchor),
@@ -407,20 +410,37 @@ class DrawingOverlayView: UIView {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         // When in draw mode, intercept touches for drawing
         // When in zoom mode, let touches pass through to scroll view
+        print("[DEBUG] hitTest - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), point: \(point)")
         if isDrawingMode && isDrawingEnabled {
+            print("[DEBUG] hitTest - intercepting touch for drawing")
             return super.hitTest(point, with: event)
         } else {
             // Let touches pass through to scroll view for zoom/pan when not in drawing mode
+            print("[DEBUG] hitTest - passing touch through to scroll view")
             return nil
         }
     }
 
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        print("[DEBUG] point(inside:) - isDrawingMode: \(isDrawingMode), isDrawingEnabled: \(isDrawingEnabled), point: \(point)")
+        if isDrawingMode && isDrawingEnabled {
+            print("[DEBUG] point(inside:) - returning true for drawing")
+            return true
+        } else {
+            print("[DEBUG] point(inside:) - returning false, passing through")
+            return false
+        }
+    }
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        print("[DEBUG] touchesBegan - isDrawingEnabled: \(isDrawingEnabled), isDrawingMode: \(isDrawingMode)")
         guard isDrawingEnabled, isDrawingMode, let touch = touches.first else { 
+            print("[DEBUG] touchesBegan - guard failed")
             return 
         }
         
         let point = convertTouchToImageCoordinates(touch: touch.location(in: self))
+        print("[DEBUG] touchesBegan - touch point: \(touch.location(in: self)), converted: \(point)")
         activePath = BlurPath(points: [point])
         setNeedsDisplay()
     }
@@ -487,16 +507,21 @@ class DrawingOverlayView: UIView {
     // MARK: - Coordinate Transformation
     // Follows the formula provided in the prompt
     func convertTouchToImageCoordinates(touch: CGPoint) -> CGPoint {
-        guard let scrollView = scrollView, let imageView = imageView, let image = originalImage else { return .zero }
+        guard let scrollView = scrollView, let imageView = imageView, let image = originalImage else { 
+            print("[DEBUG] convertTouchToImageCoordinates - missing references")
+            return .zero 
+        }
         
         // Get current zoom scale
         let zoomScale = scrollView.zoomScale
+        print("[DEBUG] convertTouchToImageCoordinates - zoomScale: \(zoomScale)")
         
         // 1. Convert touch point to scroll view content coordinates (accounting for zoom and pan)
         let contentPoint = CGPoint(
             x: (touch.x + scrollView.contentOffset.x) / zoomScale,
             y: (touch.y + scrollView.contentOffset.y) / zoomScale
         )
+        print("[DEBUG] convertTouchToImageCoordinates - contentPoint: \(contentPoint)")
         
         // 2. Convert to image view coordinates
         let imageViewFrame = imageView.frame
@@ -504,6 +529,7 @@ class DrawingOverlayView: UIView {
             x: contentPoint.x - imageViewFrame.origin.x / zoomScale,
             y: contentPoint.y - imageViewFrame.origin.y / zoomScale
         )
+        print("[DEBUG] convertTouchToImageCoordinates - imageViewPoint: \(imageViewPoint)")
         
         // 3. Convert from image view coordinates to actual image pixels
         // Account for scaleAspectFit scaling
@@ -519,17 +545,23 @@ class DrawingOverlayView: UIView {
         let imageX = imageViewPoint.x * scale
         let imageY = imageViewPoint.y * scale
         
-        return CGPoint(
+        let result = CGPoint(
             x: max(0, min(imageSize.width, imageX)),
             y: max(0, min(imageSize.height, imageY))
         )
+        print("[DEBUG] convertTouchToImageCoordinates - result: \(result)")
+        return result
     }
 
     func convertImageToScreenCoordinates(imagePoint: CGPoint) -> CGPoint {
-        guard let scrollView = scrollView, let imageView = imageView, let image = originalImage else { return .zero }
+        guard let scrollView = scrollView, let imageView = imageView, let image = originalImage else { 
+            print("[DEBUG] convertImageToScreenCoordinates - missing references")
+            return .zero 
+        }
         
         // Get current zoom scale
         let zoomScale = scrollView.zoomScale
+        print("[DEBUG] convertImageToScreenCoordinates - zoomScale: \(zoomScale)")
         
         // 1. Convert from actual image coordinates to image view coordinates
         // Account for scaleAspectFit scaling
@@ -546,6 +578,7 @@ class DrawingOverlayView: UIView {
             x: imagePoint.x * scale,
             y: imagePoint.y * scale
         )
+        print("[DEBUG] convertImageToScreenCoordinates - imageViewPoint: \(imageViewPoint)")
         
         // 2. Convert to scroll view content coordinates
         let imageViewFrame = imageView.frame
@@ -553,18 +586,21 @@ class DrawingOverlayView: UIView {
             x: imageViewPoint.x + imageViewFrame.origin.x,
             y: imageViewPoint.y + imageViewFrame.origin.y
         )
+        print("[DEBUG] convertImageToScreenCoordinates - contentPoint: \(contentPoint)")
         
         // 3. Apply zoom scale
         let zoomedPoint = CGPoint(
             x: contentPoint.x * zoomScale,
             y: contentPoint.y * zoomScale
         )
+        print("[DEBUG] convertImageToScreenCoordinates - zoomedPoint: \(zoomedPoint)")
         
         // 4. Convert to screen coordinates (accounting for scroll offset)
         let screenPoint = CGPoint(
             x: zoomedPoint.x - scrollView.contentOffset.x,
             y: zoomedPoint.y - scrollView.contentOffset.y
         )
+        print("[DEBUG] convertImageToScreenCoordinates - screenPoint: \(screenPoint)")
         
         return screenPoint
     }
