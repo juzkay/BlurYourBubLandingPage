@@ -232,7 +232,7 @@ struct ContentView: View {
                                 }
                                 
                                 // Done Button
-                                Button("DONE") {
+                                Button("DONE →") {
                                     // Move to final page with blur strength and share options
                                     showFinalPage = true
                                 }
