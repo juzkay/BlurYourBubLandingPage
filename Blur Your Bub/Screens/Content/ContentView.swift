@@ -174,7 +174,8 @@ struct ContentView: View {
                                 // Top row: Zoom, Draw, Undo
                                 HStack(spacing: 16) {
                                     Button("ZOOM") {
-                                        // Zoom functionality handled by scroll view
+                                        // Switch to zoom mode
+                                        isDrawingMode = false
                                     }
                                     .font(.system(size: 16, weight: .semibold))
                                     .padding(.vertical, 12)
@@ -188,7 +189,8 @@ struct ContentView: View {
                                     .contentShape(Rectangle())
                                     
                                     Button("DRAW") {
-                                        isDrawingMode.toggle()
+                                        // Switch to draw mode
+                                        isDrawingMode = true
                                     }
                                     .font(.system(size: 16, weight: .semibold))
                                     .padding(.vertical, 12)
