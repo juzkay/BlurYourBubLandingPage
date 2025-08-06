@@ -28,6 +28,7 @@ A beautiful, responsive landing page for the Blur Your Bub iOS app - designed to
 ## 📁 File Structure
 
 ```
+Landing Page/
 ├── index.html          # Main HTML file
 ├── styles.css          # All CSS styling
 ├── README.md           # This documentation
@@ -100,4 +101,4 @@ Replace the PNG files with your own images, maintaining the same filenames.
 
 ---
 
-Built with ❤️ for protecting baby privacy online.
+Built with ❤️ for protecting baby privacy online. 
