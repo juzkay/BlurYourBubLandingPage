@@ -41,6 +41,8 @@ struct ContentView: View {
     @State private var blurApplied: Bool = false
     // Video blur screen presentation
     @State private var showVideoBlurScreen = false
+    @State private var showingVideoPicker = false
+    @State private var selectedVideoURL: URL?
 
     // Drawing out-of-bounds error
     @State private var showDrawError = false
@@ -58,12 +60,18 @@ struct ContentView: View {
     // Settings
     @State private var showSettings = false
     
+    // Emoji sticker state
+    @State private var emojiStickers: [EmojiSticker] = []
+    @State private var selectedEmoji: String = "😀"
+    @State private var showEmojiPicker = false
+    @State private var isEmojiMode: Bool = false
+    
 
     
     var body: some View {
         NavigationView {
             ZStack(alignment: .topLeading) {
-                if selectedImage == nil && processedImage == nil && !showVideoBlurScreen {
+                if selectedImage == nil && processedImage == nil {
                     RadialGradient(
                         gradient: Gradient(stops: [
                             .init(color: Color(hex: "#6a62da"), location: 0.0),
@@ -78,7 +86,7 @@ struct ContentView: View {
                 } else {
                     Theme.background.ignoresSafeArea()
                 }
-                VStack(spacing: 12) { // Reduce overall vertical spacing
+                VStack(spacing: 4) { // Further reduced overall vertical spacing
                     // Home icon, New Photo button, and Settings
                     if selectedImage != nil || processedImage != nil {
                         HStack(alignment: .center, spacing: 0) {
@@ -87,7 +95,7 @@ struct ContentView: View {
                                     .font(.system(size: 24, weight: .regular))
                                     .foregroundColor(Theme.accent)
                                     .padding(.leading, 8)
-                                    .padding(.top, 8)
+                                    .padding(.top, 2)
                             }
                             .contentShape(Rectangle())
                             Spacer()
@@ -104,7 +112,7 @@ struct ContentView: View {
                                     .background(Theme.card)
                                     .cornerRadius(Theme.buttonCornerRadius)
                                     .padding(.trailing, 8)
-                                    .padding(.top, 8)
+                                    .padding(.top, 2)
                             }
                             .contentShape(Rectangle())
                             
@@ -117,7 +125,7 @@ struct ContentView: View {
                                     .background(Theme.card)
                                     .cornerRadius(Theme.buttonCornerRadius)
                                     .padding(.trailing, 8)
-                                    .padding(.top, 8)
+                                    .padding(.top, 2)
                             }
                             .contentShape(Rectangle())
                         }
@@ -128,7 +136,7 @@ struct ContentView: View {
                                 Text("DRAW AROUND A FACE TO BLUR")
                                     .font(.system(size: 16, weight: .semibold))
                                     .foregroundColor(Theme.primaryText)
-                                    .padding(.top, 8)
+                                    .padding(.top, 2)
                                 Spacer()
                             }
                         }
@@ -150,19 +158,25 @@ struct ContentView: View {
                     if let image = processedImage ?? selectedImage {
                         PhotoEditView(
                             image: image,
-                            isDrawingMode: $isDrawingMode,
-                            blurPaths: $blurPaths,
-                            currentPath: $currentPath,
-                            processedImage: $processedImage,
-                            originalImage: selectedImage,
-                            onAutoApplyBlur: autoApplyBlur,
-                            shouldResetZoom: $shouldResetZoom
+                            isDrawingMode: isDrawingMode,
+                            blurPaths: blurPaths,
+                            emojiStickers: emojiStickers,
+                            onPathAdded: { newPath in
+                                blurPaths.append(newPath)
+                                // Auto-apply blur when path is added
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    autoApplyBlur(for: newPath)
+                                }
+                            },
+                            onEmojiAdded: { newEmoji in
+                                emojiStickers.append(newEmoji)
+                            }
                         )
-                        .id("image_\(selectedImage?.hashValue ?? 0)_blur_\(blurApplied)") // Recreate when blur state changes
-                
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: UIScreen.main.bounds.height * 0.6) // Fixed height to prevent movement
+                        .background(Color.gray.opacity(0.1)) // Background to stabilize layout
+                        .padding(.horizontal, 8) // Reduced padding to make photo area larger
+                        .padding(.vertical, 4) // Reduced vertical padding
 
                         // Blur strength slider (move under photo when blur is applied)
                         if blurApplied || showFinalPage {
@@ -175,7 +189,14 @@ struct ContentView: View {
                                         // Only apply blur when user stops dragging to prevent lag
                                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                             if let orig = lastBlurredOriginal {
-                                                processedImage = BlurProcessor.applyBlur(to: orig, with: lastBlurredPaths, blurRadius: blurRadius)
+                                                var processedImg = BlurProcessor.applyBlur(to: orig, with: lastBlurredPaths, blurRadius: blurRadius)
+                                                
+                                                // Apply emojis if any exist
+                                                if !emojiStickers.isEmpty {
+                                                    processedImg = applyEmojisToImage(processedImg)
+                                                }
+                                                
+                                                processedImage = processedImg
                                             }
                                         }
                                     }
@@ -216,37 +237,34 @@ struct ContentView: View {
                         } else {
                             // Pre-blur UI: Drawing controls
                             VStack(spacing: 16) {
-                                // Instructions
-                                Text("Draw around faces to blur them automatically")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(Theme.secondaryText)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal)
-                                
-                                // Top row: Zoom, Draw, Undo
-                                HStack(spacing: 16) {
+                                // Four buttons row: ZOOM, DRAW, EMOJI, UNDO
+                                HStack(spacing: 8) {
                                     Button("ZOOM") {
                                         // Switch to zoom mode
                                         isDrawingMode = false
+                                        isEmojiMode = false
                                     }
                                     .font(.system(size: 16, weight: .semibold))
                                     .padding(.vertical, 12)
-                                    .padding(.horizontal, 24)
-                                    .background(!isDrawingMode ? Theme.accent : Color.clear)
-                                    .foregroundColor(!isDrawingMode ? .white : Theme.primaryText)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44) // Fixed height for all buttons
+                                    .background(!isDrawingMode && !isEmojiMode ? Theme.accent : Color.clear)
+                                    .foregroundColor(!isDrawingMode && !isEmojiMode ? .white : Theme.primaryText)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .stroke(!isDrawingMode ? Color.clear : Color.black, lineWidth: 2)
+                                            .stroke(!isDrawingMode && !isEmojiMode ? Color.clear : Color.black, lineWidth: 2)
                                     )
                                     .contentShape(Rectangle())
                                     
                                     Button("DRAW") {
                                         // Switch to draw mode
                                         isDrawingMode = true
+                                        isEmojiMode = false
                                     }
                                     .font(.system(size: 16, weight: .semibold))
                                     .padding(.vertical, 12)
-                                    .padding(.horizontal, 24)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44) // Fixed height for all buttons
                                     .background(isDrawingMode ? Theme.accent : Color.clear)
                                     .foregroundColor(isDrawingMode ? .white : Theme.primaryText)
                                     .overlay(
@@ -255,22 +273,43 @@ struct ContentView: View {
                                     )
                                     .contentShape(Rectangle())
                                     
+                                    Button("EMOJI") {
+                                        // Switch to emoji mode and auto-apply to blur areas
+                                        isDrawingMode = false
+                                        isEmojiMode = true
+                                        showEmojiPicker = true
+                                    }
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .padding(.vertical, 12)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44) // Fixed height for all buttons
+                                    .background(isEmojiMode ? Theme.accent : Color.clear)
+                                    .foregroundColor(isEmojiMode ? .white : Theme.primaryText)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(isEmojiMode ? Color.clear : Color.black, lineWidth: 2)
+                                    )
+                                    .contentShape(Rectangle())
+                                    
                                     Button("UNDO") {
                                         undoLastPath()
                                     }
                                     .font(.system(size: 16, weight: .semibold))
                                     .padding(.vertical, 12)
-                                    .padding(.horizontal, 24)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44) // Fixed height for all buttons
                                     .background(Color.clear)
-                                    .foregroundColor(lastBlurredPaths.isEmpty ? Color.gray : Theme.primaryText)
+                                    .foregroundColor(Theme.primaryText)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .stroke(lastBlurredPaths.isEmpty ? Color.gray : Color.black, lineWidth: 2)
+                                            .stroke(Color.black, lineWidth: 2)
                                     )
-                                    .disabled(lastBlurredPaths.isEmpty)
                                     .contentShape(Rectangle())
+                                    .disabled(lastBlurredPaths.isEmpty && emojiStickers.isEmpty)
+                                    .opacity(lastBlurredPaths.isEmpty && emojiStickers.isEmpty ? 0.5 : 1.0)
                                 }
-                                
+                                .padding(.top, 16) // Padding above the main button row
+
                                 // Done Button
                                 Button("DONE →") {
                                     // Move to final page with blur strength and share options
@@ -291,6 +330,7 @@ struct ContentView: View {
                         EmptyStateView(
                             showingImagePicker: $showingImagePicker, 
                             showVideoBlurScreen: $showVideoBlurScreen,
+                            showingVideoPicker: $showingVideoPicker,
                             localizationManager: localizationManager
                         )
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -349,12 +389,22 @@ struct ContentView: View {
             }
         }
 
-        .sheet(isPresented: $showVideoBlurScreen) {
-            VideoBlurScreen()
+        .fullScreenCover(isPresented: $showVideoBlurScreen) {
+            VideoBlurScreen(selectedVideoURL: selectedVideoURL)
+        }
+        .sheet(isPresented: $showingVideoPicker) {
+            ContentVideoPicker { url in
+                // When video is selected, store the URL and open the video blur screen
+                selectedVideoURL = url
+                showVideoBlurScreen = true
+            }
         }
 
         .sheet(isPresented: $showSettings) {
             SettingsView(settingsManager: settingsManager, localizationManager: localizationManager)
+        }
+        .sheet(isPresented: $showEmojiPicker) {
+            EmojiPickerView(selectedEmoji: $selectedEmoji)
         }
         .alert(isPresented: $showDrawError) {
             Alert(title: Text("Drawing Error"),
@@ -376,6 +426,8 @@ struct ContentView: View {
         lastBlurredOriginal = nil
         blurApplied = false
         isDrawingMode = false
+        emojiStickers = []
+        isEmojiMode = false
         
         // Force zoom reset in PhotoEditView by updating the id
         // The id change will force PhotoEditView to recreate and reset zoom
@@ -392,9 +444,12 @@ struct ContentView: View {
         showingImagePicker = false
         showingShareSheet = false
         showVideoBlurScreen = false
+        selectedVideoURL = nil
         showDrawError = false
         isDrawingMode = false
         showFinalPage = false
+        emojiStickers = []
+        isEmojiMode = false
     }
     
     private func applyBlur() {
@@ -424,26 +479,35 @@ struct ContentView: View {
             lastBlurredPaths.append(completedPath)
         }
         
+        // Clear emoji stickers when new blur is applied
+        emojiStickers.removeAll()
+        
         lastBlurredOriginal = originalImage
-        processedImage = BlurProcessor.applyBlur(to: originalImage, with: lastBlurredPaths, blurRadius: blurRadius)
+        var processedImg = BlurProcessor.applyBlur(to: originalImage, with: lastBlurredPaths, blurRadius: blurRadius)
+        
+        // Apply emojis if any exist
+        if !emojiStickers.isEmpty {
+            processedImg = applyEmojisToImage(processedImg)
+        }
+        
+        processedImage = processedImg
         // Don't set blurApplied = true - stay on drawing page
         blurPaths = [] // Clear the paths since blur is applied
         currentPath = nil
         // Keep drawing mode active so user can continue drawing
         
-        // Reset zoom to fit screen after blur is applied
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            shouldResetZoom = true
-        }
+        // Remove zoom reset after blur is applied to test if this causes movement
+        // DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        //     shouldResetZoom = true
+        // }
     }
     
     private func resetZoomToFitScreen() {
-        // Trigger zoom reset by updating the state
-        shouldResetZoom = true
-        // Reset the flag after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            shouldResetZoom = false
-        }
+        // Remove zoom reset functionality to test if this causes movement
+        // shouldResetZoom = true
+        // DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        //     shouldResetZoom = false
+        // }
     }
     
     private func showShareSheetDelayed() {
@@ -460,11 +524,14 @@ struct ContentView: View {
         currentPath = nil
     }
     
-    // Add undo function to remove the last drawn path
+    // Add undo function to remove the last drawn path or emoji
     private func undoLastPath() {
         if !lastBlurredPaths.isEmpty {
             lastBlurredPaths.removeLast()
             currentPath = nil
+            
+            // Clear emoji stickers when blur paths change
+            emojiStickers.removeAll()
             
             // Reapply blur with remaining paths
             if let originalImage = lastBlurredOriginal {
@@ -476,7 +543,114 @@ struct ContentView: View {
                     processedImage = BlurProcessor.applyBlur(to: originalImage, with: lastBlurredPaths, blurRadius: blurRadius)
                 }
             }
+        } else if !emojiStickers.isEmpty {
+            // Remove last emoji sticker
+            emojiStickers.removeLast()
         }
+    }
+    
+    // Place emoji sticker on the image
+    private func placeEmoji(at position: CGPoint) {
+        // If there are blur paths, automatically place emojis over blur areas
+        if !lastBlurredPaths.isEmpty {
+            // Clear existing emoji stickers
+            emojiStickers.removeAll()
+            
+            // Place emojis over each blur path
+            for (index, blurPath) in lastBlurredPaths.enumerated() {
+                // Calculate center of blur path
+                let centerPoint = calculateBlurPathCenter(blurPath)
+                
+                // Create emoji sticker at the center of blur area
+                let newSticker = EmojiSticker(
+                    emoji: selectedEmoji,
+                    position: centerPoint,
+                    size: calculateEmojiSize(for: blurPath)
+                )
+                emojiStickers.append(newSticker)
+            }
+            
+            // Remove blur when emoji is applied
+            processedImage = selectedImage
+            lastBlurredPaths.removeAll()
+            lastBlurredOriginal = nil
+        } else {
+            // If no blur paths, place emoji at the tapped position
+            let newSticker = EmojiSticker(emoji: selectedEmoji, position: position)
+            emojiStickers.append(newSticker)
+        }
+    }
+    
+    // Calculate the center point of a blur path
+    private func calculateBlurPathCenter(_ blurPath: BlurPath) -> CGPoint {
+        guard !blurPath.points.isEmpty else { return .zero }
+        
+        let xSum = blurPath.points.reduce(0) { $0 + $1.x }
+        let ySum = blurPath.points.reduce(0) { $0 + $1.y }
+        
+        let centerX = xSum / CGFloat(blurPath.points.count)
+        let centerY = ySum / CGFloat(blurPath.points.count)
+        
+        return CGPoint(x: centerX, y: centerY)
+    }
+    
+    // Calculate appropriate emoji size based on blur path size
+    private func calculateEmojiSize(for blurPath: BlurPath) -> CGFloat {
+        guard !blurPath.points.isEmpty else { return 60.0 }
+        
+        // Calculate the bounding box of the blur path
+        let xCoords = blurPath.points.map { $0.x }
+        let yCoords = blurPath.points.map { $0.y }
+        
+        let minX = xCoords.min() ?? 0
+        let maxX = xCoords.max() ?? 0
+        let minY = yCoords.min() ?? 0
+        let maxY = yCoords.max() ?? 0
+        
+        let width = maxX - minX
+        let height = maxY - minY
+        
+        // Use the larger dimension to determine emoji size
+        let maxDimension = max(width, height)
+        
+        // Scale emoji size to cover the entire blur area with some padding
+        // Use 1.2x the max dimension to ensure full coverage
+        let scaledSize = max(40.0, min(200.0, maxDimension * 1.2))
+        
+        return scaledSize
+    }
+    
+    // Apply emojis to the processed image
+    private func applyEmojisToImage(_ image: UIImage) -> UIImage {
+        guard !emojiStickers.isEmpty else { return image }
+        
+        UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+        defer { UIGraphicsEndImageContext() }
+        
+        // Draw the base image
+        image.draw(in: CGRect(origin: .zero, size: image.size))
+        
+        // Draw emoji stickers
+        for sticker in emojiStickers {
+            let emojiSize = sticker.size
+            let emojiRect = CGRect(
+                x: sticker.position.x - emojiSize / 2,
+                y: sticker.position.y - emojiSize / 2,
+                width: emojiSize,
+                height: emojiSize
+            )
+            
+            // Create attributed string for emoji
+            let emojiAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: emojiSize)
+            ]
+            let attributedString = NSAttributedString(string: sticker.emoji, attributes: emojiAttributes)
+            
+            // Draw emoji
+            attributedString.draw(in: emojiRect)
+        }
+        
+        return UIGraphicsGetImageFromCurrentImageContext() ?? image
     }
     
     // Reset everything for new photo selection
@@ -493,12 +667,15 @@ struct ContentView: View {
         showDrawError = false
         showExportSheet = false
         showFinalPage = false
+        emojiStickers = []
+        isEmojiMode = false
     }
     
     // Clear all drawings at any point
     private func clearAllDrawings() {
         blurPaths.removeAll()
         currentPath = nil
+        emojiStickers.removeAll()
         // If we had blur applied, reset to original image
         if blurApplied {
             processedImage = nil
@@ -521,6 +698,8 @@ struct ContentView: View {
             lastBlurredOriginal = nil
             showFinalPage = false
             shouldResetZoom = true
+            emojiStickers = []
+            isEmojiMode = false
         } else if let original = selectedImage {
             // If no lastBlurredOriginal, reset to the current selected image
             selectedImage = original
@@ -533,6 +712,8 @@ struct ContentView: View {
             lastBlurredOriginal = nil
             showFinalPage = false
             shouldResetZoom = true
+            emojiStickers = []
+            isEmojiMode = false
         }
     }
 }
@@ -541,6 +722,7 @@ struct ContentView: View {
 struct EmptyStateView: View {
     @Binding var showingImagePicker: Bool
     @Binding var showVideoBlurScreen: Bool
+    @Binding var showingVideoPicker: Bool
     @ObservedObject var localizationManager: LocalizationManager
     var body: some View {
         VStack(spacing: 12) {
@@ -572,7 +754,7 @@ struct EmptyStateView: View {
                 .shadow(color: Theme.shadow, radius: 8, x: 0, y: 4)
             }
             .padding(.horizontal, 24)
-            Button(action: { showVideoBlurScreen = true }) {
+            Button(action: { showingVideoPicker = true }) {
                 HStack {
                     Image(systemName: "video.fill")
                     Text(localizationManager.localizedString("Select Video"))
@@ -1300,6 +1482,17 @@ struct ExportPopupModal: View {
     let onSave: () -> Void
     let onShare: () -> Void
     let onCancel: () -> Void
+    let title: String
+    let saveButtonText: String
+    
+    init(onSave: @escaping () -> Void, onShare: @escaping () -> Void, onCancel: @escaping () -> Void, title: String = "Export Image", saveButtonText: String = "Save image to device") {
+        self.onSave = onSave
+        self.onShare = onShare
+        self.onCancel = onCancel
+        self.title = title
+        self.saveButtonText = saveButtonText
+    }
+    
     var body: some View {
         VStack(spacing: 24) {
             Spacer(minLength: 0)
@@ -1310,11 +1503,11 @@ struct ExportPopupModal: View {
                     .frame(width: 48, height: 48)
                     .foregroundColor(Theme.accent)
                     .padding(.top, 16)
-                Text("Export Image")
+                Text(title)
                     .font(.system(size: 20, weight: .semibold, design: .rounded))
                     .foregroundColor(Theme.primaryText)
                 Button(action: onSave) {
-                    Text("Save image to device")
+                    Text(saveButtonText)
                         .font(Theme.fontSubtitle)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
@@ -2484,4 +2677,130 @@ class LocalizationManager: ObservableObject {
         "Later": "나중에",
         "Close App": "앱 닫기"
     ]
+}
+
+// MARK: - Emoji Picker View
+struct EmojiPickerView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @Binding var selectedEmoji: String
+    
+    // Popular emojis organized by category with iOS 18 updates
+    let emojiCategories: [(String, [String])] = [
+        ("Babies & Kids", ["👶", "👶🏻", "👶🏼", "👶🏽", "👶🏾", "👶🏿", "🧒", "🧒🏻", "🧒🏼", "🧒🏽", "🧒🏾", "🧒🏿", "👦", "👦🏻", "👦🏼", "👦🏽", "👦🏾", "👦🏿", "👧", "👧🏻", "👧🏼", "👧🏽", "👧🏾", "👧🏿", "👨‍🍼", "👩‍🍼", "👨‍👩‍👦", "👨‍👩‍👧", "👨‍👩‍👦‍👦", "👨‍👩‍👧‍👧", "👨‍👩‍👧‍👦", "👨‍👦", "👨‍👦‍👦", "👨‍👧", "👨‍👧‍👦", "👨‍👧‍👧", "👩‍👦", "👩‍👦‍👦", "👩‍👧", "👩‍👧‍👦", "👩‍👧‍👧", "👨‍👨‍👦", "👨‍👨‍👧", "👨‍👨‍👦‍👦", "👨‍👨‍👧‍👧", "👨‍👨‍👧‍👦", "👩‍👩‍👦", "👩‍👩‍👧", "👩‍👩‍👦‍👦", "👩‍👩‍👧‍👧", "👩‍👩‍👧‍👦", "👨‍👩‍👦", "👨‍👩‍👧", "👨‍👩‍👦‍👦", "👨‍👩‍👧‍👧", "👨‍👩‍👧‍👦"]),
+        ("Faces", ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪", "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫", "🤥", "😶", "😐", "😑", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕", "🤑", "🤠", "🥹", "🫠", "🫢", "🫣", "🫡", "🫥", "🫤", "🫦", "🫧", "🫨", "🫶", "🫂", "🫰", "🫱", "🫲", "🫳", "🫴", "🫵", "🫷", "🫸", "🫹", "🫺", "🫻", "🫼", "🫽", "🫾", "🫿"]),
+        ("Animals", ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤", "🐣", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🐛", "🦋", "🐌", "🐞", "🐜", "🦗", "🕷️", "🕸️", "🦂", "🦟", "🦠", "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑", "🦐", "🦞", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳", "🐋", "🦈", "🐊", "🐅", "🐆", "🦓", "🦍", "🦧", "🐘", "🦛", "🦏", "🐪", "🐫", "🦒", "🦘", "🐃", "🐂", "🐄", "🐎", "🐖", "🐏", "🐑", "🐐", "🦌", "🐕", "🐩", "🦮", "🐕‍🦺", "🐈", "🐈‍⬛", "🐓", "🦃", "🦚", "🦜", "🦢", "🦩", "🕊️", "🐇", "🦝", "🦨", "🦡", "🦫", "🦦", "🦥", "🐁", "🐀", "🐿️", "🦔"]),
+        ("Objects", ["💎", "🔮", "🎈", "🎉", "🎊", "🎋", "🎍", "🎎", "🎏", "🎐", "🎀", "🎁", "🎗️", "🎟️", "🎫", "🎖️", "🏆", "🏅", "🥇", "🥈", "🥉", "⚽", "🏀", "🏈", "⚾", "🥎", "🎾", "🏐", "🏉", "🥏", "🎱", "🪀", "🏓", "🏸", "🏒", "🏑", "🥍", "🏏", "🥅", "⛳", "🪁", "🏹", "🎣", "🤿", "🥊", "🥋", "🎽", "🛹", "🛷️", "⛸️", "🥌", "🎿", "⛷️", "🏂", "🪂", "🏋️‍♀️", "🏋️", "🏋️‍♂️", "🤼‍♀️", "🤼", "🤼‍♂️", "🤸‍♀️", "🤸", "🤸‍♂️", "⛹️‍♀️", "⛹️", "⛹️‍♂️", "🤺", "🤾‍♀️", "🤾", "🤾‍♂️", "🏌️‍♀️", "🏌️", "🏌️‍♂️", "🏇", "🧘‍♀️", "🧘", "🧘‍♂️", "🏄‍♀️", "🏄", "🏄‍♂️", "🏊‍♀️", "🏊", "🏊‍♂️", "🤽‍♀️", "🤽", "🤽‍♂️", "🚣‍♀️", "🚣", "🚣‍♂️", "🧗‍♀️", "🧗", "🧗‍♂️", "🚵‍♀️", "🚵", "🚵‍♂️", "🚴‍♀️", "🚴", "🚴‍♂️", "🏆", "🥇", "🥈", "🥉", "🏅", "🎖️", "🏵️", "🎗️", "🎫", "🎟️", "🎪", "🤹‍♀️", "🤹", "🤹‍♂️", "🎭", "🩰", "🎨", "🎬", "🎤", "🎧", "🎼", "🎹", "🥁", "🎷", "🎺", "🎸", "🪕", "🎻", "🎲", "♟️", "🎯", "🎳", "🎮", "🎰", "🧩", "🎨", "📱", "📲", "💻", "⌨️", "🖥️", "��️", "🖱️", "🖲️", "💽", "💾", "💿", "📀", "🧮", "🎥", "📷", "📸", "📹", "📼", "🔍", "🔎", "🔏", "🔐", "🔒", "🔓"]),
+        ("Symbols", ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "☮️", "✝️", "☪️", "🕉️", "☸️", "✡️", "🔯", "🕎", "☯️", "☦️", "🛐", "⛎", "♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓", "🆔", "⚛️", "🉑", "☢️", "☣️", "📴", "📳", "🈶", "🈚", "🈸", "🈺", "🈷️", "✴️", "🆚", "💮", "🉐", "㊙️", "㊗️", "🈴", "🈵", "🈹", "🈲", "🅰️", "🅱️", "🆎", "🆑", "🅾️", "🆘", "❌", "⭕", "🛑", "⛔", "📛", "🚫", "💯", "💢", "♨️", "🚷", "🚯", "🚳", "🚱", "🔞", "📵", "🚭", "❗", "❕", "❓", "❔", "‼️", "⁉️", "🔅", "🔆", "〽️", "⚠️", "🚸", "🔱", "⚜️", "🔰", "♻️", "✅", "🈯", "💹", "❇️", "✳️", "❎", "🌐", "💠", "Ⓜ️", "🌀", "💤", "🏧", "🚾", "♿", "🅿️", "🛗", "🛂", "🛃", "🛄", "🛅", "🚹", "🚺", "🚼", "🚻", "🚮", "🎦", "📶", "🈁", "🔣", "ℹ️", "🔤", "🔡", "🔠", "🆖", "🆗", "🆙", "🆒", "🆕", "🆓", "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟", "🔢", "#️⃣", "*️⃣", "⏏️", "▶️", "⏸️", "⏯️", "⏹️", "⏺️", "⏭️", "⏮️", "⏩", "⏪", "⏫", "⏬", "◀️", "🔼", "🔽", "➡️", "⬅️", "⬆️", "⬇️", "↗️", "↘️", "↙️", "↖️", "↕️", "↔️", "↪️", "↩️", "⤴️", "⤵️", "🔀", "🔁", "🔂", "🔄", "🔃", "🎵", "🎶", "➕", "➖", "➗", "✖️", "💲", "💱", "™️", "©️", "®️", "〰️", "➰", "➿", "🔚", "🔙", "🔛", "🔝", "🔜", "✔️", "☑️", "🔘", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚫", "⚪", "🟤", "🔺", "🔻", "🔸", "🔹", "🔶", "🔷", "🔳", "🔲", "▪️", "▫️", "◾", "◽", "◼️", "◻️", "🟥", "🟧", "🟨", "🟩", "🟦", "🟪", "⬛", "⬜", "🟫", "🔈", "🔇", "🔉", "🔊", "🔔", "🔕", "📣", "📢", "👁️‍🗨️", "💬", "💭", "🗯️", "♠️", "♣️", "♥️", "♦️", "🃏", "🎴", "🀄", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚", "🕛", "🕜", "🕝", "🕞", "🕟", "🕠", "🕡", "🕢", "🕣", "🕤", "🕥", "🕦", "🕧"])
+    ]
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Theme.background.ignoresSafeArea()
+                
+                VStack(spacing: 0) {
+                    // Header
+                    HStack {
+                        Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(Theme.accent)
+                        }
+                        Spacer()
+                        Text("Choose Emoji")
+                            .font(Theme.fontTitle)
+                            .foregroundColor(Theme.primaryText)
+                        Spacer()
+                        // Empty space for balance
+                        Image(systemName: "xmark")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundColor(.clear)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    
+                    ScrollView {
+                        LazyVStack(spacing: 20) {
+                            ForEach(emojiCategories, id: \.0) { category in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text(category.0)
+                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                        .foregroundColor(Theme.primaryText)
+                                        .padding(.horizontal, 20)
+                                    
+                                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 8), spacing: 8) {
+                                        ForEach(category.1, id: \.self) { emoji in
+                                            Button(action: {
+                                                selectedEmoji = emoji
+                                                presentationMode.wrappedValue.dismiss()
+                                            }) {
+                                                Text(emoji)
+                                                    .font(.system(size: 32))
+                                                    .frame(width: 50, height: 50)
+                                                    .background(Color.white)
+                                                    .cornerRadius(12)
+                                                    .shadow(color: Theme.shadow, radius: 4, x: 0, y: 2)
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                        }
+                                    }
+                                    .padding(.horizontal, 20)
+                                }
+                            }
+                        }
+                        .padding(.top, 20)
+                        .padding(.bottom, 40)
+                    }
+                }
+            }
+        }
+        .navigationBarHidden(true)
+    }
+}
+
+// MARK: - Content Video Picker
+struct ContentVideoPicker: UIViewControllerRepresentable {
+    let onVideoSelected: (URL) -> Void
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration()
+        config.filter = .videos
+        config.selectionLimit = 1
+        
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: PHPickerViewController, context: Context) {}
+    
+    class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let parent: ContentVideoPicker
+        
+        init(_ parent: ContentVideoPicker) {
+            self.parent = parent
+        }
+        
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            picker.dismiss(animated: true)
+            
+            guard let result = results.first else { return }
+            
+            result.itemProvider.loadFileRepresentation(forTypeIdentifier: "public.movie") { url, error in
+                guard let url = url else { return }
+                
+                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(url.lastPathComponent)
+                try? FileManager.default.removeItem(at: tempURL)
+                try? FileManager.default.copyItem(at: url, to: tempURL)
+                
+                DispatchQueue.main.async {
+                    self.parent.onVideoSelected(tempURL)
+                }
+            }
+        }
+    }
 }

@@ -2,184 +2,197 @@ import Photos
 import Foundation
 import SwiftUI
 import AVFoundation
+import Combine
 import os
 
 private let logger = Logger(subsystem: "com.yourapp.blur", category: "video")
 
 class VideoBlurViewModel: ObservableObject {
-    // State properties
+    // MARK: - Published Properties
     @Published var selectedVideoURL: URL?
     @Published var processedVideoURL: URL?
     @Published var isProcessing = false
     @Published var showVideoPicker = false
-    @Published var showSaveAlert = false
-    @Published var saveSuccess = false
-    @Published var errorMessage: String?
-    @Published var showFaceGallery = false
-    @Published var showBlurStrengthAdjustment = false
-    @Published var blurStrength: Double = 15
+    @Published var showAlert = false
+    @Published var alertTitle = ""
+    @Published var alertMessage = ""
+    @Published var blurMasks: [BlurMask] = []
     @Published var detectedFaces: [DetectedFace] = []
-    @Published var selectedFaceIDs: Set<UUID> = []
-    @Published var firstFrameImage: UIImage? = nil
+    
+    // Video playback state
+    @Published var isPlaying = false
+    @Published var currentTime: CMTime = .zero
+    @Published var duration: CMTime = .zero
+    @Published var videoReady = false
+    
+    // MARK: - Private Properties
+    var player: AVPlayer?
+    private var timeObserver: Any?
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Business Logic Methods
     
-    func scanVideoForFaces(from url: URL) {
-        detectedFaces = []
-        selectedFaceIDs = []
-        showFaceGallery = false
-        let asset = AVAsset(url: url)
-        let duration = asset.duration
-        let generator = AVAssetImageGenerator(asset: asset)
-        generator.appliesPreferredTrackTransform = true
-        let totalSeconds = Int(CMTimeGetSeconds(duration))
-        let times = stride(from: 0, to: totalSeconds, by: 1).map { CMTime(seconds: Double($0), preferredTimescale: 600) }
-        let context = CIContext()
-        let detector = CIDetector(ofType: CIDetectorTypeFace, context: context, options: [CIDetectorAccuracy: CIDetectorAccuracyHigh])
-        DispatchQueue.global(qos: .userInitiated).async {
-            var foundFaces: [DetectedFace] = []
-            for time in times {
-                guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else { continue }
-                let ciImage = CIImage(cgImage: cgImage)
-                let features = detector?.features(in: ciImage) as? [CIFaceFeature] ?? []
-                for feature in features {
-                    let faceRect = feature.bounds
-                    if let faceCg = cgImage.cropping(to: faceRect) {
-                        let faceImg = UIImage(cgImage: faceCg)
-                        let detected = DetectedFace(image: faceImg, boundingBox: faceRect, time: time)
-                        foundFaces.append(detected)
-                    }
-                }
-            }
-            DispatchQueue.main.async {
-                var facesToShow = foundFaces
-                if facesToShow.isEmpty {
-                    if let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil) {
-                        let width = CGFloat(cgImage.width)
-                        let height = CGFloat(cgImage.height)
-                        let side = min(width, height) / 4
-                        let rect = CGRect(x: (width - side)/2, y: (height - side)/2, width: side, height: side)
-                        if let faceCg = cgImage.cropping(to: rect) {
-                            let faceImg = UIImage(cgImage: faceCg)
-                            let dummy = DetectedFace(image: faceImg, boundingBox: rect, time: .zero)
-                            facesToShow = [dummy]
-                        }
-                    }
-                }
-                self.detectedFaces = facesToShow
-                self.showFaceGallery = true
-            }
-        }
-    }
-
-    func processVideoWithSelectedFaces() {
-        guard let inputURL = selectedVideoURL else { logger.error("No selectedVideoURL"); return }
-        isProcessing = true
+    func clearVideo() {
+        selectedVideoURL = nil
         processedVideoURL = nil
-        errorMessage = nil
-        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("blurred_\(UUID().uuidString).mov")
-        let asset = AVAsset(url: inputURL)
-        guard let videoTrack = asset.tracks(withMediaType: .video).first else {
-            isProcessing = false
-            errorMessage = "No video track found."
-            showSaveAlert = true
-            logger.error("No video track found in asset")
-            return
+        blurMasks.removeAll()
+        detectedFaces.removeAll()
+        isPlaying = false
+        currentTime = .zero
+        duration = .zero
+        videoReady = false
+        
+        // Remove time observer
+        if let observer = timeObserver {
+            player?.removeTimeObserver(observer)
+            timeObserver = nil
         }
-        let composition = AVMutableComposition()
-        guard let compositionVideoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-            isProcessing = false
-            errorMessage = "Could not create composition track."
-            showSaveAlert = true
-            logger.error("Could not create composition track")
-            return
-        }
+        player = nil
+        
+        // Reset audio session
         do {
-            try compositionVideoTrack.insertTimeRange(CMTimeRange(start: .zero, duration: asset.duration), of: videoTrack, at: .zero)
+            try AVAudioSession.sharedInstance().setActive(false)
         } catch {
-            isProcessing = false
-            errorMessage = "Failed to insert time range."
-            showSaveAlert = true
-            logger.error("Failed to insert time range: \(String(describing: error))")
-            return
-        }
-        let videoComposition = AVMutableVideoComposition()
-        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
-        videoComposition.renderSize = videoTrack.naturalSize
-        let instruction = AVMutableVideoCompositionInstruction()
-        instruction.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
-        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionVideoTrack)
-        layerInstruction.setTransform(videoTrack.preferredTransform, at: .zero)
-        layerInstruction.setOpacityRamp(fromStartOpacity: 1.0, toEndOpacity: 1.0, timeRange: instruction.timeRange)
-        instruction.layerInstructions = [layerInstruction]
-        videoComposition.instructions = [instruction]
-        videoComposition.customVideoCompositorClass = SelectedFaceBlurVideoCompositor.self
-        SelectedFaceBlurVideoCompositor.selectedFaceRects = selectedFaceIDs.compactMap { id in
-            detectedFaces.first(where: { $0.id == id })?.boundingBox
-        }
-        SelectedFaceBlurVideoCompositor.blurStrength = blurStrength
-        guard let exportSession = AVAssetExportSession(asset: composition, presetName: AVAssetExportPreset1280x720) else {
-            isProcessing = false
-            errorMessage = "Could not create export session."
-            showSaveAlert = true
-            logger.error("Could not create export session")
-            return
-        }
-        exportSession.outputURL = outputURL
-        exportSession.outputFileType = .mov
-        exportSession.videoComposition = videoComposition
-        exportSession.exportAsynchronously {
-            DispatchQueue.main.async {
-                self.isProcessing = false
-                if exportSession.status == .completed {
-                    self.processedVideoURL = outputURL
-                    logger.debug("processVideoWithSelectedFaces set processedVideoURL: \(outputURL.path, privacy: .public)")
-                } else {
-                    self.errorMessage = exportSession.error?.localizedDescription ?? "Unknown error"
-                    self.showSaveAlert = true
-                    logger.error("Export session failed: \(String(describing: exportSession.error))")
-                }
-            }
+            logger.error("Failed to deactivate audio session: \(error.localizedDescription)")
         }
     }
-
-    func saveProcessedVideo() {
-        guard let url = processedVideoURL else { return }
-        PHPhotoLibrary.requestAuthorization { status in
-            if status == .authorized || status == .limited {
-                PHPhotoLibrary.shared().performChanges({
-                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
-                }) { success, error in
+    
+    func addNewMask() {
+        let newMask = BlurMask(
+            center: CGPoint(x: 0.5, y: 0.5),
+            radius: 50,
+            isSelected: true
+        )
+        blurMasks.append(newMask)
+    }
+    
+    func undoLastMask() {
+        if !blurMasks.isEmpty {
+            blurMasks.removeLast()
+        }
+    }
+    
+    func removeMask(_ mask: BlurMask) {
+        blurMasks.removeAll { $0.id == mask.id }
+    }
+    
+    func setupVideoPlayer(url: URL) {
+        // Configure audio session for video playback
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback, options: [])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            logger.error("Failed to configure audio session: \(error.localizedDescription)")
+        }
+        
+        let playerItem = AVPlayerItem(url: url)
+        player = AVPlayer(playerItem: playerItem)
+        
+        // Get video duration
+        let asset = AVAsset(url: url)
+        Task {
+            do {
+                let duration = try await asset.load(.duration)
+                await MainActor.run {
+                    self.duration = duration
+                }
+            } catch {
+                logger.error("Failed to load video duration: \(error.localizedDescription)")
+            }
+        }
+        
+        // Setup time observer
+        let interval = CMTime(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        timeObserver = player?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+            self?.currentTime = time
+        }
+        
+        // Observe player status
+        playerItem.publisher(for: \.status)
+            .sink { status in
+                if status == .readyToPlay {
+                    logger.info("Video loaded successfully")
                     DispatchQueue.main.async {
-                        self.saveSuccess = success
-                        self.errorMessage = error?.localizedDescription
-                        self.showSaveAlert = true
+                        self.videoReady = true
                     }
                 }
-            } else {
+            }
+            .store(in: &cancellables)
+    }
+    
+    func togglePlayback() {
+        if isPlaying {
+            player?.pause()
+        } else {
+            player?.play()
+        }
+        isPlaying.toggle()
+    }
+    
+    func seekToTime(_ time: CMTime) {
+        player?.seek(to: time)
+        currentTime = time
+    }
+    
+    func exportVideo() {
+        guard let processedURL = processedVideoURL else { return }
+        
+        PHPhotoLibrary.requestAuthorization { [weak self] status in
+            guard status == .authorized else {
                 DispatchQueue.main.async {
-                    self.saveSuccess = false
-                    self.errorMessage = "Photo library access denied."
-                    self.showSaveAlert = true
+                    self?.showAlert = true
+                    self?.alertTitle = "Permission Required"
+                    self?.alertMessage = "Please allow access to save videos to your photo library."
+                }
+                return
+            }
+            
+            PHPhotoLibrary.shared().performChanges({
+                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: processedURL)
+            }) { success, error in
+                DispatchQueue.main.async {
+                    if success {
+                        self?.showAlert = true
+                        self?.alertTitle = "Success"
+                        self?.alertMessage = "Video saved to your photo library."
+                    } else {
+                        self?.showAlert = true
+                        self?.alertTitle = "Error"
+                        self?.alertMessage = error?.localizedDescription ?? "Failed to save video."
+                    }
                 }
             }
         }
     }
-
-    func processVideo() {
-        guard let inputURL = selectedVideoURL else { return }
-        isProcessing = true
-        processedVideoURL = nil
-        let outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("blurred_\(UUID().uuidString).mov")
-        VideoBlurProcessor.processExistingVideo(inputURL: inputURL, outputURL: outputURL) { success, error in
-            DispatchQueue.main.async {
-                self.isProcessing = false
-                if success {
-                    self.processedVideoURL = outputURL
-                } else {
-                    self.errorMessage = error?.localizedDescription ?? "Unknown error"
-                    self.showSaveAlert = true
+    
+    // MARK: - Video Processing
+    
+    func processVideo() async {
+        guard let url = selectedVideoURL else { return }
+        
+        await MainActor.run {
+            isProcessing = true
+        }
+        
+        do {
+            let processedURL = try await VideoProcessor.processVideo(
+                inputURL: url,
+                blurMasks: blurMasks,
+                onProgress: { progress in
+                    // Update progress if needed
                 }
+            )
+            
+            await MainActor.run {
+                isProcessing = false
+                processedVideoURL = processedURL
+            }
+        } catch {
+            await MainActor.run {
+                isProcessing = false
+                showAlert = true
+                alertTitle = "Processing Error"
+                alertMessage = error.localizedDescription
             }
         }
     }
