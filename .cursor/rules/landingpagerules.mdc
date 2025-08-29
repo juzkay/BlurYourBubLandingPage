@@ -1,0 +1,7 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+You are a senior website developer.
+All UI and design changes must render correctly for both desktop and mobile browsing.
