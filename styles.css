@@ -955,8 +955,11 @@ p {
 }
 
 .faq-container {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
 }
 
 .faq-item {
@@ -1079,6 +1082,11 @@ p {
     .faq-section h2 {
         font-size: 2rem;
         margin-bottom: 40px;
+    }
+    
+    .faq-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
     }
     
     .faq-question {
