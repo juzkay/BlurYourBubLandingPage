@@ -30,6 +30,7 @@
         <div class="nav-links">
             <a href="#features" class="nav-link">Features</a>
             <a href="#pricing" class="nav-link">Pricing</a>
+            <a href="#faq" class="nav-link">FAQ</a>
             <a href="contact.html" class="nav-link">Contact</a>
             <a href="#" class="nav-link download-nav">Download</a>
         </div>
@@ -188,6 +189,74 @@
         </div>
     </section>
 
+    <!-- FAQ Section -->
+    <section id="faq" class="faq-section">
+        <div class="container">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-container">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Why should I blur kids' faces before posting?</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Blurring isn't just a filter—it's bulletproof privacy. Full-face blur stops identity linkage for good—and <strong><a href="#" class="download-link">BlurYourBub</a></strong> makes that happen completely on-device before any sharing.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Isn't putting a sticker or emoji on Instagram enough?</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Not quite. Stickers may look safe, but your original unblurred images may still be uploaded or exist in cloud backups, chats, or shared folders on social platforms. On-device blurring means only the redacted version ever gets uploaded or shared—keeping your child private from the start. <strong><a href="#" class="download-link">BlurYourBub</a></strong> ensures the blur is applied BEFORE upload.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Is there any statistic around this?</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Absolutely—1 in 8 children worldwide have been victims of image-based abuse in just the past year. That's nearly 302 million impacted globally—highlighting the urgency and effectiveness of full-face blurring as a protective measure. <a href="https://www.unsw.edu.au/newsroom/news/2024/05/more-than-300-million-child-victims-of-online-sexual-abuse-globally-report" target="_blank" rel="noopener">Source</a></p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Can I adjust the blur intensity?</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes! The app offers multiple blur levels from light blur to heavy pixelation, giving you complete control over how much you want to obscure faces while maintaining photo quality.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>Does the app work offline?</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Absolutely! <strong><a href="#" class="download-link">BlurYourBub</a></strong> works completely offline. All face detection and blurring happens directly on your device, ensuring your photos remain private and the app works anywhere, even without internet.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <h3>What happens to the original photo?</h3>
+                        <span class="faq-toggle">+</span>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Your original photo remains untouched in your camera roll. <strong><a href="#" class="download-link">BlurYourBub</a></strong> creates a new, blurred version that you can save separately, giving you the choice between the original and protected versions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
@@ -220,6 +289,39 @@
                 navLinks.style.borderRadius = '15px';
                 navLinks.style.minWidth = '200px';
                 navLinks.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.3)';
+            });
+
+            // FAQ accordion functionality
+            const faqItems = document.querySelectorAll('.faq-item');
+            
+            faqItems.forEach(item => {
+                const question = item.querySelector('.faq-question');
+                const answer = item.querySelector('.faq-answer');
+                const toggle = item.querySelector('.faq-toggle');
+                
+                question.addEventListener('click', () => {
+                    const isOpen = answer.style.maxHeight && answer.style.maxHeight !== '0px';
+                    
+                    // Close all other items
+                    faqItems.forEach(otherItem => {
+                        if (otherItem !== item) {
+                            otherItem.querySelector('.faq-answer').style.maxHeight = '0px';
+                            otherItem.querySelector('.faq-toggle').textContent = '+';
+                            otherItem.classList.remove('open');
+                        }
+                    });
+                    
+                    // Toggle current item
+                    if (isOpen) {
+                        answer.style.maxHeight = '0px';
+                        toggle.textContent = '+';
+                        item.classList.remove('open');
+                    } else {
+                        answer.style.maxHeight = answer.scrollHeight + 'px';
+                        toggle.textContent = '−';
+                        item.classList.add('open');
+                    }
+                });
             });
         });
     </script>
