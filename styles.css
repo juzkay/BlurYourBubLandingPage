@@ -393,6 +393,46 @@ p {
     border-radius: 15px;
 }
 
+/* Features CTA */
+.features-cta {
+    margin-top: 40px;
+    display: flex;
+    justify-content: center;
+}
+
+.watch-tutorial-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: #ffffff;
+    color: #2D1B69;
+    border: 2px solid #2D1B69;
+    padding: 12px 20px;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+}
+
+.watch-tutorial-btn:hover {
+    transform: translateY(-2px);
+    background: #2D1B69;
+    color: #ffffff;
+    box-shadow: 0 10px 24px rgba(45, 27, 105, 0.3);
+}
+
+.watch-tutorial-btn .youtube-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+.watch-tutorial-btn:hover .youtube-icon {
+    transform: scale(1.1);
+}
+
 /* Pricing Section */
 .pricing {
     padding: 80px 0;
