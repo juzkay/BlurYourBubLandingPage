@@ -372,7 +372,7 @@ p {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 40px;
+    gap: 20px;
     max-width: 1400px;
     margin: 0 auto;
     flex-wrap: nowrap;
@@ -391,6 +391,27 @@ p {
     max-width: 250px;
     height: auto;
     border-radius: 15px;
+}
+
+/* Individual feature image scaling for alignment */
+.feature-image-1 {
+    transform: scale(1.0);
+    transform-origin: center;
+}
+
+.feature-image-2 {
+    transform: scale(0.95);
+    transform-origin: center;
+}
+
+.feature-image-3 {
+    transform: scale(1.05);
+    transform-origin: center;
+}
+
+.feature-image-4 {
+    transform: scale(0.98);
+    transform-origin: center;
 }
 
 /* Features CTA */
